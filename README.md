@@ -4,9 +4,37 @@ One Android-only modified Ren'Py SDK, with app features integrated into its
 Python runtime and native screens. Ren'Py/SDL owns rendering, story flow and
 Android startup. This fork does not require Flet, Flutter or Dart.
 
+## The vision
+
+**RenModPy should be as capable and usable as RenFletPy, with its useful
+features built into one continuous modified Ren'Py experience for Android.**
+Reuse and adapt useful code and behavior from SDK- so it fits Ren'Py's Python
+runtime and story workflow.
+
+Home, application screens, Records, settings, dialogue, choices and activities
+should share one live session, one Python runtime, one project and one Android
+APK. Moving between a story and an application screen should keep your place
+in the story and feel like using the same application throughout.
+
+The heart of the project is Ren'Py's Python runtime, story syntax, visual-novel
+dialogue and character systems, and story-aware saves. Loading a story should
+restore its position while keeping newer application Records and reading
+settings. Tactics remains a secondary example; useful app controls and Android
+capabilities should serve this continuous experience.
+
+The creator's words capture the goal:
+
+> It's just one thing, continuous thing
+
+Progress toward this vision is recorded in [feature parity](docs/feature-parity.md).
+Android quality must be demonstrated by running the APK on an Android emulator
+or device and exercising real input, saves and restart behavior.
+
 The user's [vision](docs/vision.md) and [original prompts](docs/user-prompts.md)
 are preserved in the repository. See the [Codex handoff](docs/codex-handoff.md)
 for current work, Android test status and continuation instructions.
+
+## Current foundation
 
 This first foundation reuses the modified Ren'Py 8.5.3 and RAPT inputs from
 [`hujuhhujuh9-max/SDK-`](https://github.com/hujuhhujuh9-max/SDK-), pinned by

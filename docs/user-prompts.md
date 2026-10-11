@@ -62,3 +62,7 @@ See [vision.md](vision.md) for the product interpretation and
 > Install and if you have trouble stop, because I can ask codex and it has a better environment space.
 >
 > You just keep my prompts in the repository and my vision
+
+## 13
+
+> Add to the readme so my hopes are still engraved there.
