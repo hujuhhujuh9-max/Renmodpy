@@ -7,9 +7,16 @@ and evidence. The user's later instructions take precedence.
 
 ## One continuous Android application
 
-RenModPy is a modified Ren'Py SDK focused on Android. Its quality benchmark is
-RenFletPy from `hujuhhujuh9-max/SDK-`. Reuse useful donor behavior and code,
-changing it as needed to fit Ren'Py and Python.
+RenModPy is "Ren'Py++" for Android: modified Ren'Py with a focused set of
+useful additions. Its niche is Python stories, visual novels and integrated
+Android app screens. RenFletPy from `hujuhhujuh9-max/SDK-` is the quality
+benchmark for those features. Reuse useful donor behavior and code, changing
+it as needed to fit Ren'Py and Python.
+
+Godot's broader general-purpose engine scope stays outside this project.
+Godot already exists; RenModPy should occupy the space of focused Ren'Py
+extensions. A feature belongs here when it improves Ren'Py's Python/story
+workflow or integrates a useful app feature into that same experience.
 
 The user renewed work in Codex on 2026-10-11 and asked RenModPy to carry
 forward SDK-'s strengths as SDK- development ends. Continue the existing

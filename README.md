@@ -6,10 +6,16 @@ Android startup. This fork does not require Flet, Flutter or Dart.
 
 ## The vision
 
-**RenModPy should be as capable and usable as RenFletPy, with its useful
-features built into one continuous modified Ren'Py experience for Android.**
+**RenModPy is "Ren'Py++" for Android: modified Ren'Py with a focused set of
+useful additions.** Its space is Python stories, visual novels and integrated
+Android app screens. RenFletPy is the quality benchmark for those features.
 Reuse and adapt useful code and behavior from SDK- so it fits Ren'Py's Python
 runtime and story workflow.
+
+Godot already occupies the broader game-engine space. Building another full
+general-purpose engine is outside this project's roadmap. Each RenModPy
+addition should extend Ren'Py's story/Python workflow or connect a useful app
+feature to that same experience.
 
 Home, application screens, Records, settings, dialogue, choices and activities
 should share one live session, one Python runtime, one project and one Android

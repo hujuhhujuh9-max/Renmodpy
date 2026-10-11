@@ -13,6 +13,11 @@ rendering, story flow, and the Python interpreter. Features imported from SDK-
 must be integrated into RenModPy; do not reintroduce Flet, Flutter, Dart, or a
 second Python startup owner.
 
+Keep the scope at "Ren'Py++": focused Ren'Py extensions for Python stories,
+visual novels and integrated Android app screens. Do not expand the roadmap
+into recreating Godot's broader general-purpose engine. Treat later user
+corrections as authoritative when voice-transcription wording is misleading.
+
 Use RenFletPy's working user-facing behavior as the quality benchmark. Home,
 app screens and stories must share one live session in the modified engine.
 Track missing capabilities honestly in `docs/feature-parity.md`; integration

@@ -2,6 +2,8 @@
 
 Recorded on 2026-10-11. Project prompts are preserved verbatim and in order,
 including voice-dictation spellings. Environment payloads are omitted.
+Later corrections resolve transcription errors; quoted errors are not product
+requirements.
 See [vision.md](vision.md) for the product interpretation and
 [codex-handoff.md](codex-handoff.md) for implementation status.
 
@@ -70,3 +72,14 @@ See [vision.md](vision.md) for the product interpretation and
 ## 14 — Codex continuation
 
 > Hujuhhujuh9-max, renpymod and SDK repositories. Work on renpymod 😢, I want renpymod to carry the glory of sdk that we are not continuing
+
+## 15
+
+> Yeah sure, but also the fact that this is supposed to not, you know charge me or something, but actually just be the Renpy plus plus sort of thing, which is like a modified Ren'Py with an extra bit of thing. Cause again, the rest of the stuff Godot can do, we're not really touching. So we're not going full Godot because Godot is already existing. Ren modify needs to be that other kind of space
+
+## 16
+
+> Okay, text to speech is fucking me right now. I'm not talking anything about money or whatever the fuck, you know, charging or whatever or, you know, subscription. No, no, no, motherfuck, motherfuck. There are fucking mistakes in this motherfucking text to speech
+
+This correction applies to the transcript in prompt 15. The corrected product
+intent is recorded in [vision.md](vision.md).

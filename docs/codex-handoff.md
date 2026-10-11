@@ -4,6 +4,11 @@ Read [vision.md](vision.md), [user-prompts.md](user-prompts.md) and `AGENTS.md`
 first. The intended result is one continuous Android-only modified Ren'Py
 application with RenFletPy as the quality benchmark.
 
+The user clarified the niche as "Ren'Py++": modified Ren'Py with focused
+additions for Python stories, visual novels and integrated Android app screens.
+Godot's broader general-purpose engine scope remains outside the roadmap.
+Apply later user corrections when interpreting voice-transcription errors.
+
 ## Where the work is
 
 - Repository: `hujuhhujuh9-max/Renmodpy`.
