@@ -1,0 +1,467 @@
+"""Native tactics displayable adapted from 2d-test at 7dc24c50.
+
+State lives in a saveable BoardSession owned by the RenModPy script.
+This displayable holds disposable drawing caches and a private picking copy.
+"""
+
+import json
+import os
+from dataclasses import asdict
+from math import atan2, cos, degrees, hypot, radians, sin
+
+from renpy.exports import Displayable, Render, redraw, restart_interaction, render as render_displayable
+from renpy.display.module import linmap
+import renpy.pygame as pygame
+from renpy.text.text import Text
+
+from .tactics import (
+    BG, BOARD_H, BOARD_W, BOARD_Z, EDGE, ENEMY, ENEMY_BODY, GRID, GOAL, HEAD, MOVE,
+    PLAYER_BODY, PLAYER_BODY_2, SELECTED, SHADOW, WALL,
+    TERRAIN, LEVEL_H, Cell, TacticsView, Unit, build_draw_items, camera_bounds,
+    diamond, draw_key, point_in_diamond, poly, project,
+)
+
+
+class _BlendedCanvas:
+    """Composite each translucent face onto the faces already painted below it."""
+
+    def __init__(self, width, height):
+        self.surface = pygame.Surface((width, height), pygame.SRCALPHA, 32)
+        self.surface.fill(BG)
+        self.layer = pygame.Surface((width, height), pygame.SRCALPHA, 32)
+
+    def draw(self, function, color, bounds, *args, **kwargs):
+        if len(color) < 4 or color[3] == 255:
+            function(self.surface, color, *args, **kwargs)
+        elif color[3]:
+            bounds = pygame.Rect(bounds).clip(self.surface.get_rect())
+            if not bounds.width or not bounds.height:
+                return
+            self.layer.set_clip(bounds)
+            self.layer.fill((0, 0, 0, 0), bounds)
+            # Ren'Py's drawing API blends alpha while painting a surface.
+            # Paint the face opaque, then apply its opacity once at the blit.
+            function(self.layer, (*color[:3], 255), *args, **kwargs)
+            face = self.layer.subsurface(bounds)
+            linmap(face, face, 256, 256, 256, color[3] + 1)
+            self.surface.blit(self.layer, bounds.topleft, bounds)
+
+    @staticmethod
+    def bounds(points, margin=0):
+        xs, ys = zip(*points)
+        left, top = min(xs) - margin, min(ys) - margin
+        return (left, top, max(xs) - left + margin + 1, max(ys) - top + margin + 1)
+
+    def polygon(self, color, points):
+        self.draw(pygame.draw.polygon, color, self.bounds(points), points)
+
+    def lines(self, color, closed, points, width=1):
+        self.draw(pygame.draw.lines, color, self.bounds(points, width), closed, points, width)
+
+    def rect(self, color, rect):
+        self.draw(pygame.draw.rect, color, rect, rect)
+
+    def ellipse(self, color, rect, width=0):
+        # Ren'Py's pygame ellipse takes (center_x, center_y, radius_x,
+        # radius_y), unlike the bounding boxes used by the imported renderer.
+        x, y, w, h = rect
+        rx, ry = max(1, w // 2), max(1, h // 2)
+        cx, cy = round(x + w / 2), round(y + h / 2)
+        bounds = (cx - rx - width, cy - ry - width,
+                  2 * (rx + width) + 2, 2 * (ry + width) + 2)
+        self.draw(pygame.draw.ellipse, color, bounds, (cx, cy, rx, ry), width)
+
+    def circle(self, color, center, radius):
+        x, y = center
+        self.draw(pygame.draw.circle, color, (x - radius, y - radius, 2 * radius + 1, 2 * radius + 1),
+                  center, radius)
+
+
+def interactive(session):
+    return session.result is None
+
+
+class OpacityDial(Displayable):
+    """A touch dial backed by the same saved value as the opacity slider."""
+
+    def __init__(self, board):
+        super().__init__()
+        self.board = board
+        self.revision = None
+        self.dragging = False
+
+    def render(self, width, height, st, at):
+        current = self.board.session.current()
+        if current is not None and current.revision != self.revision:
+            self.revision, self.dragging = current.revision, False
+        value = self.board.session.tactics_view() or TacticsView()
+        rv = Render(80, 80)
+        canvas = rv.canvas()
+        canvas.circle((27, 40, 56, 255), (40, 40), 36)
+        points = [(40 + 32 * cos(radians(135 + n * 5)), 40 + 32 * sin(radians(135 + n * 5)))
+                  for n in range(55)]
+        canvas.lines((62, 79, 95, 255), False, poly(points), width=5)
+        active = points[:max(2, round(value.opacity * 54) + 1)]
+        canvas.lines((185, 215, 222, 255), False, poly(active), width=5)
+        angle = radians(135 + value.opacity * 270)
+        canvas.lines((244, 240, 232, 255), False,
+                     [(40, 40), (round(40 + 24 * cos(angle)), round(40 + 24 * sin(angle)))], width=4)
+        canvas.circle((244, 240, 232, 255), (40, 40), 4)
+        return rv
+
+    def event(self, ev, x, y, st):
+        current = self.board.session.current()
+        if not interactive(self.board.session) or current.revision != self.revision:
+            self.dragging = False
+            return None
+        down = ev.type == pygame.MOUSEBUTTONDOWN and getattr(ev, "button", 1) == 1
+        up = ev.type == pygame.MOUSEBUTTONUP and getattr(ev, "button", 1) == 1
+        if down and 0 <= x <= 80 and 0 <= y <= 80:
+            self.dragging = True
+        if self.dragging and (down or up or ev.type == pygame.MOUSEMOTION):
+            angle = (degrees(atan2(y - 40, x - 40)) - 135) % 360
+            value = angle / 270 if angle <= 270 else (1.0 if angle < 315 else 0.0)
+            self.board.change_view(opacity=round(value, 2))
+        if up:
+            self.dragging = False
+        return None
+
+
+class _ScaledCanvas:
+    """Fit the imported board coordinates inside the native scene viewport."""
+
+    def __init__(self, canvas, scale, offset):
+        self.canvas, self.scale, self.offset = canvas, scale, offset
+
+    def point(self, point):
+        x, y = point
+        return (round(self.offset[0] + x * self.scale), round(self.offset[1] + y * self.scale))
+
+    def bounds(self, rect):
+        x, y, width, height = rect
+        return (*self.point((x, y)), max(1, round(width * self.scale)), max(1, round(height * self.scale)))
+
+    def polygon(self, color, points):
+        self.canvas.polygon(color, [self.point(p) for p in points])
+
+    def lines(self, color, closed, points, width=1):
+        self.canvas.lines(color, closed, [self.point(p) for p in points], width=max(1, round(width * self.scale)))
+
+    def rect(self, color, rect):
+        self.canvas.rect(color, self.bounds(rect))
+
+    def ellipse(self, color, rect, width=0):
+        self.canvas.ellipse(color, self.bounds(rect), width=max(1, round(width * self.scale)) if width else 0)
+
+    def circle(self, color, center, radius):
+        self.canvas.circle(color, self.point(center), max(1, round(radius * self.scale)))
+
+
+class TacticsDisplayable(Displayable):
+    """Invisible level grids, visible terrain and units, and three camera modes."""
+
+    # Native surfaces are disposable render caches and must not enter saves.
+    nosave = Displayable.nosave + ["_raster_surface", "_painted"]
+    _raster_surface = None
+    _painted = None
+
+    def __init__(self, session, **properties) -> None:
+        super().__init__(**properties)
+        self.session = session
+        self.state = None
+        # Screen button sensitivity is evaluated before the first render,
+        # including after recovery with no counter/presentation change.
+        current = self.session.current()
+        self.revision = current.revision if current is not None and current.kind == "tactics" else None
+        self.scale = 1.0
+        self.offset = (0.0, 0.0)
+        self.viewport = (0, 0)
+        self._painted = None
+        self.camera = TacticsView()
+        self.opacity_dial = OpacityDial(self)
+        self._drag = None
+        self._dragging = False
+
+    @property
+    def opacity(self):
+        return (self.session.tactics_view() or TacticsView()).opacity
+
+    @opacity.setter
+    def opacity(self, value):
+        self.change_view(opacity=max(0.0, min(1.0, float(value))))
+
+    def change_view(self, **changes):
+        if self.interactive() and self.session.set_tactics_view(self.revision, **changes):
+            redraw(self, 0)
+            redraw(self.opacity_dial, 0)
+            restart_interaction()
+
+    def rotate(self, direction):
+        current = self.session.tactics_view()
+        if current is not None:
+            self.change_view(rotation=(current.rotation + direction) % 4)
+
+    def zoom_by(self, amount):
+        current = self.session.tactics_view()
+        if current is not None:
+            self.change_view(zoom=round(max(0.65, min(1.8, current.zoom + amount)), 2))
+
+    def center(self):
+        self.change_view(zoom=1.0, pan_x=0.0, pan_y=0.0)
+
+    def set_mode(self, mode):
+        current = self.session.tactics_view()
+        if current is None:
+            return
+        level = current.level
+        if mode == "top_down" and level is None:
+            state = self.session.tactics_state()
+            level = state.selected.cell.z if state and state.selected else 0
+        self.change_view(mode=mode, level=level)
+
+    def set_level(self, level):
+        current = self.session.tactics_view()
+        if current is not None and (level is not None or current.mode != "top_down"):
+            self.change_view(level=level)
+
+    def is_mode(self, mode):
+        return (self.session.tactics_view() or TacticsView()).mode == mode
+
+    def is_level(self, level):
+        return (self.session.tactics_view() or TacticsView()).level == level
+
+    def input_hint(self):
+        if self.is_mode("side"):
+            return "Side view for inspection. Move in Iso or Top down."
+        return "Tap a unit, then a blue outline. Drag to pan."
+
+    def view_label(self):
+        current = self.session.tactics_view() or TacticsView()
+        level = "All levels" if current.level is None else ("L0 Ground", "L1 Terrain", "L2 Sky")[current.level]
+        direction = ("North", "East", "South", "West")[current.rotation]
+        return f"{direction} · {level} · {round(current.zoom * 100)}% zoom"
+
+    def reset(self) -> None:
+        if self.interactive() and self.session.reset_tactics(self.revision):
+            redraw(self, 0)
+            restart_interaction()
+
+    def skip(self):
+        if self.interactive():
+            self.session.choose(self.revision, "skipped")
+
+    def render(self, width: int, height: int, st: float, at: float):
+        self.viewport = (width, height)
+        render = Render(width, height)
+        current = self.session.current()
+        self.state = self.session.tactics_state()
+        if current is None or self.state is None:
+            self._raster_surface, self._painted = None, None
+            render.blit(_BlendedCanvas(width, height).surface, (0, 0))
+            return render
+        if current.revision != self.revision:
+            self._drag, self._dragging = None, False
+        self.revision = current.revision
+        self.camera = current.view
+        left, top, right, bottom = camera_bounds(self.camera.mode)
+        self.scale = min(width / (right - left), height / (bottom - top)) * self.camera.zoom
+        self.offset = (width / 2.0 - (left + right) / 2 * self.scale + self.camera.pan_x * self.scale,
+                       height / 2.0 - (top + bottom) / 2 * self.scale + self.camera.pan_y * self.scale)
+        levels = list(range(BOARD_Z)) if self.camera.level is None else [self.camera.level]
+        floor_ticks = ([] if self.camera.mode == "top_down" else
+                       [self.screen_position(*self.project(Cell(2.5, 2.5, floor)))[1] for floor in range(BOARD_Z)])
+        painted = (current.revision, current.positions, current.selected_unit, self.camera, width, height)
+        if painted != self._painted or self._raster_surface is None:
+            self._raster_surface = self.paint_board(width, height, levels, floor_ticks)
+            self._painted = painted
+            print("RENMODPY_TACTICS " + json.dumps({
+                "revision": current.revision, "positions": current.positions,
+                "selected_unit": current.selected_unit, "view": asdict(self.camera),
+                "floor_height": LEVEL_H, "floor_ticks": floor_ticks, "viewport": [width, height],
+                "terrain_colors": {"top": TERRAIN[:3], "wall": WALL[:3]}, "grid_levels": levels,
+                "scale": self.scale, "offset": self.offset, "pid": os.getpid()}), flush=True)
+        render.blit(self._raster_surface, (0, 0))
+        for floor, y in enumerate(floor_ticks):
+            if 12 <= y <= height - 12:
+                label = render_displayable(Text("L" + str(floor), size=18, color="#b9d7de"), 40, 32, st, at)
+                render.blit(label, (30, round(y - 12)))
+        return render
+
+    def paint_board(self, width, height, levels, floor_ticks):
+        raster = _BlendedCanvas(width, height)
+        canvas = _ScaledCanvas(raster, self.scale, self.offset)
+        self.draw_grids(canvas, levels)
+        edge = ((*EDGE[:3], 255) if self.camera.opacity >= 0.75
+                else (106, 128, 144, 120))
+
+        def terrain(color):
+            return (*color[:3], round(255 * self.camera.opacity))
+
+        for item in build_draw_items(self.state, self.camera.rotation, self.camera.mode, self.camera.level):
+            if item.kind == "terrain":
+                surface = item.payload
+                pts = poly(diamond(surface.cell, self.camera.rotation, self.camera.mode))
+                color = WALL if self.camera.mode == "top_down" and self.camera.level < surface.cell.z else TERRAIN
+                if self.camera.mode == "side":
+                    canvas.lines(terrain(color), False, pts, width=4)
+                else:
+                    canvas.polygon(terrain(color), pts)
+                    canvas.lines(edge, True, pts, width=2)
+
+            elif item.kind == "marker":
+                surface, reachable, selected = item.payload
+                pts = poly(diamond(surface.cell, self.camera.rotation, self.camera.mode))
+                if reachable:
+                    canvas.lines(MOVE, self.camera.mode != "side", pts, width=2)
+                if selected or surface.cell == GOAL:
+                    canvas.lines(SELECTED, self.camera.mode != "side", pts, width=3)
+
+            elif item.kind == "wall":
+                pts = poly(item.payload)
+                canvas.polygon(terrain(WALL), pts)
+                canvas.lines(edge, True, pts, width=2)
+
+            elif item.kind == "unit":
+                self.draw_unit(canvas, item.payload)
+
+        # A fixed ruler makes the equal vertical floor steps visible in every
+        # orientation. Its ticks follow zoom/pan, independently of tile opacity.
+        if floor_ticks:
+            raster.lines((185, 215, 222, 180), False,
+                         [(20, round(floor_ticks[0])), (20, round(floor_ticks[-1]))], width=2)
+            for y in floor_ticks:
+                raster.lines((185, 215, 222, 230), False, [(14, round(y)), (26, round(y))], width=2)
+        return raster.surface
+
+    def project(self, cell):
+        return project(cell, self.camera.rotation, self.camera.mode)
+
+    def draw_grids(self, canvas, levels):
+        for level in levels:
+            color = (*GRID[:3], GRID[3] - level * 25)
+            if self.camera.mode == "side":
+                canvas.lines(color, False, [project(Cell(-0.5, 0, level), mode="side"),
+                                           project(Cell(BOARD_W - 0.5, 0, level), mode="side")])
+                continue
+            for x in range(BOARD_W + 1):
+                canvas.lines(color, False, [self.project(Cell(x - 0.5, -0.5, level)),
+                                           self.project(Cell(x - 0.5, BOARD_H - 0.5, level))])
+            for y in range(BOARD_H + 1):
+                canvas.lines(color, False, [self.project(Cell(-0.5, y - 0.5, level)),
+                                           self.project(Cell(BOARD_W - 0.5, y - 0.5, level))])
+        if self.camera.mode == "top_down" or len(levels) < 2:
+            return
+        columns = [Cell(x, y, 0) for x in (-0.5, BOARD_W - 0.5) for y in (-0.5, BOARD_H - 0.5)]
+        columns += [u.cell for u in self.state.units if u.cell.z > 0]
+        for cell in columns:
+            x, low = self.project(Cell(cell.x, cell.y, min(levels)))
+            _, high = self.project(Cell(cell.x, cell.y, max(levels)))
+            for y in range(round(high), round(low), 14):
+                canvas.lines((94, 112, 135, 105), False, [(x, y), (x, min(y + 6, low))])
+
+    def draw_unit(self, canvas, unit: Unit) -> None:
+        cx, cy = self.project(unit.cell)
+        cx, cy = int(cx), int(cy)
+        body = (
+            ENEMY_BODY if unit.team == ENEMY
+            else PLAYER_BODY_2 if unit.variant
+            else PLAYER_BODY
+        )
+        if self.camera.mode == "top_down":
+            canvas.circle(SHADOW, (cx, cy), 22)
+            canvas.circle(body, (cx, cy), 18)
+            if self.state.selected_uid == unit.uid:
+                canvas.ellipse(SELECTED, (cx - 25, cy - 25, 50, 50), width=3)
+            return
+        canvas.ellipse(SHADOW, (cx - 25, cy - 6, 50, 15))
+        canvas.rect(body, (cx - 18, cy - 47, 36, 48))
+        canvas.circle(HEAD, (cx, cy - 62), 18)
+
+        if self.state.selected_uid == unit.uid:
+            canvas.ellipse(
+                SELECTED,
+                (cx - 29, cy - 11, 58, 22),
+                width=3,
+            )
+
+    def pick_unit(self, x: float, y: float) -> Unit | None:
+        candidates = []
+        for unit in self.state.units:
+            if self.camera.level is not None and unit.cell.z != self.camera.level:
+                continue
+            cx, cy = self.project(unit.cell)
+            hit = (abs(x - cx) <= 27 and abs(y - cy) <= 27 if self.camera.mode == "top_down"
+                   else cx - 27 <= x <= cx + 27 and cy - 84 <= y <= cy + 10)
+            if hit:
+                candidates.append(unit)
+
+        return max(
+            candidates, default=None,
+            key=lambda u: draw_key(u.cell, self.camera.rotation, self.camera.mode),
+        )
+
+    def pick_surface(self, x: float, y: float) -> Cell | None:
+        candidates = [
+            s.cell for s in self.state.board.iter_surfaces()
+            if (self.camera.level is None or s.cell.z == self.camera.level)
+            and point_in_diamond(x, y, s.cell, self.camera.rotation, self.camera.mode)
+        ]
+
+        return max(
+            candidates, default=None,
+            key=lambda c: draw_key(c, self.camera.rotation, self.camera.mode),
+        )
+
+    def event(self, ev, x: float, y: float, st: float):
+        if not self.interactive() or self.state is None:
+            self._drag, self._dragging = None, False
+            return None
+        if ev.type == pygame.MOUSEBUTTONDOWN:
+            if not (0 <= x < self.viewport[0] and 0 <= y < self.viewport[1]):
+                return None
+            if getattr(ev, "button", 1) == 1:
+                self._drag = (x, y, self.camera.pan_x, self.camera.pan_y, self.revision)
+                self._dragging = False
+            elif getattr(ev, "button", 1) in (4, 5):
+                self.zoom_by(0.1 if ev.button == 4 else -0.1)
+            return None
+        if ev.type == pygame.MOUSEMOTION and self._drag is not None:
+            sx, sy, pan_x, pan_y, revision = self._drag
+            if revision != self.revision:
+                self._drag = None
+                return None
+            if hypot(x - sx, y - sy) >= 10:
+                self._dragging = True
+            if self._dragging:
+                self.change_view(pan_x=max(-360.0, min(360.0, pan_x + (x - sx) / self.scale)),
+                                 pan_y=max(-280.0, min(280.0, pan_y + (y - sy) / self.scale)))
+            return None
+        if ev.type == pygame.MOUSEBUTTONUP and getattr(ev, "button", 1) == 1:
+            dragged = self._dragging
+            self._drag, self._dragging = None, False
+            if dragged or not (0 <= x < self.viewport[0] and 0 <= y < self.viewport[1]):
+                return None
+            x, y = self.board_position(x, y)
+            unit = self.pick_unit(x, y)
+            if unit is not None:
+                changed = self.session.select_tactics_unit(self.revision, unit.uid)
+            else:
+                target = self.pick_surface(x, y)
+                changed = target is not None and self.session.move_tactics_unit(self.revision, target)
+            if changed:
+                redraw(self, 0)
+                restart_interaction()
+            if self.session.result is not None:
+                return self.session.result
+        return None
+
+    def interactive(self):
+        current = self.session.current()
+        return interactive(self.session) and current.revision == self.revision
+
+    def screen_position(self, x, y):
+        return (self.offset[0] + x * self.scale, self.offset[1] + y * self.scale)
+
+    def board_position(self, x, y):
+        return ((x - self.offset[0]) / self.scale, (y - self.offset[1]) / self.scale)
+

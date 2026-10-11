@@ -1,0 +1,159 @@
+# Installed only in a disposable test project by check_native.py.
+
+init 900 python:
+    import json as _rm_check_json
+    import os as _rm_check_os
+    import sys as _rm_check_sys
+    import types as _rm_check_types
+    from pathlib import Path as _rm_check_Path
+    from renpy.renmodpy.tactics import Cell as _rm_check_Cell
+
+    # Transient driver state must not itself be restored by a story load.
+    _rm_check_probe = _rm_check_types.ModuleType("renmodpy_native_probe")
+    _rm_check_sys.modules[_rm_check_probe.__name__] = _rm_check_probe
+    _rm_check_probe.output = _rm_check_Path(_rm_check_os.environ["RENMODPY_CHECK_OUTPUT"])
+    _rm_check_probe.phase = _rm_check_os.environ.get("RENMODPY_CHECK_PHASE", "save")
+    _rm_check_probe.mode = "home"
+    config.savedir = _rm_check_os.environ["RENMODPY_CHECK_SAVEDIR"]
+    config.label_overrides["start"] = "renmodpy_check_start"
+    config.performance_test = False
+    config.check_conflicting_properties = True
+    config.autosave_frequency = None
+    config.always_shown_screens.append("renmodpy_check_driver")
+
+    def _rm_check_write(filename, value):
+        (_rm_check_probe.output / filename).write_text(_rm_check_json.dumps(value, indent=2))
+
+    def _rm_check_capture(name):
+        assert renpy.screenshot(str(_rm_check_probe.output / (name + ".png")))
+
+    def _rm_check_list(screen, identifier, variable):
+        rows = renpy.get_screen_variable(variable, screen=screen)
+        if variable == "snapshot":
+            rows = rows["records"]
+        assert len(rows) == 1, "Expected one populated list row"
+        viewport = renpy.get_displayable(screen, identifier)
+        assert viewport.width > 500 and viewport.height > 200, "List was laid out offscreen"
+
+    def _rm_check_after_load():
+        checkpoint = _rm_check_json.loads((_rm_check_probe.output / "checkpoint.json").read_text())
+        actual = _rm_check_json.loads(_rm_check_json.dumps(_renmodpy_board.snapshot()))
+        assert actual == checkpoint["board"], "Board/camera did not restore"
+        assert renmodpy_check_counter == 1, "Story variables did not restore"
+        assert [r["values"]["title"] for r in _rm_services.records().list()] == [
+            "Before save", "Newer {application} [data]"], "Loading rolled records back"
+        _rm_check_probe.mode = "reloaded-tactics"
+
+    config.after_load_callbacks.append(_rm_check_after_load)
+
+    def _rm_check_tick():
+        mode = _rm_check_probe.mode
+        if mode in ("home", "records", "saves"):
+            if not renpy.get_screen("renmodpy_" + mode):
+                return None
+            _rm_check_capture(mode)
+            if mode == "records":
+                _rm_check_list("renmodpy_records", "records_list", "snapshot")
+            return True
+        if mode == "dialogue-home":
+            if not renpy.get_screen("say"):
+                return None
+            _rm_check_capture("dialogue")
+            _rm_check_probe.mode = "home-return"
+            renpy.run([Function(_rm_return_home), ShowMenu("renmodpy_home")])
+            return None
+        if mode == "home-return":
+            assert renpy.get_screen("renmodpy_home"), "Home did not open from dialogue"
+            assert renmodpy_check_counter == 3
+            assert renpy.can_load(_rm_services.RESUME_SLOT)
+            _rm_check_capture("story-home")
+            _rm_check_probe.mode = "finish-dialogue"
+            return True
+        if mode == "finish-dialogue":
+            assert renpy.get_screen("say"), "Return did not resume dialogue"
+            assert renmodpy_check_counter == 3
+            return True
+        if mode == "saved-catalog":
+            assert renpy.get_screen("renmodpy_saves")
+            _rm_check_capture("saved-catalog")
+            _rm_check_list("renmodpy_saves", "saves_list", "entries")
+            return True
+        if not renpy.get_screen("renmodpy_tactics"):
+            return None
+        board = renpy.get_screen_variable("board", screen="renmodpy_tactics")
+        assert board._raster_surface is not None, "Board was not rendered"
+        if mode == "configure-board":
+            assert _renmodpy_board.move_tactics_unit(_renmodpy_board.revision, _rm_check_Cell(1, 0, 0))
+            board.change_view(rotation=1, zoom=1.2, opacity=0.55, pan_x=10.0)
+            _rm_check_probe.mode = "save-board"
+            renpy.restart_interaction()
+            return None
+        if mode == "save-board":
+            _rm_check_capture("tactics")
+            _rm_services.save_resume()
+            assert _rm_services.resume_slot() == _rm_services.RESUME_SLOT
+            assert FileLoad(_rm_services.resume_slot(), slot=True).get_sensitive()
+            slot = _rm_services.create_save("Native checkpoint", "The balcony route")
+            entry = next(r for r in _rm_services.save_catalog() if r["slot"] == slot)
+            assert entry["name"] == "Native checkpoint" and entry["supported"]
+            _rm_check_write("checkpoint.json", {"slot": slot, "board": _renmodpy_board.snapshot()})
+            _rm_services.records().create({"title": "Newer {application} [data]", "body": "Kept after load"})
+            _renmodpy_board.reset_tactics(_renmodpy_board.revision)
+            renpy.store.renmodpy_check_counter = 99
+            renpy.quit(status=0, save=False)
+        if mode == "reloaded-tactics":
+            _rm_check_capture(mode)
+            board.skip()
+            return "skipped"
+        raise AssertionError("Unknown native probe stage: " + mode)
+
+screen renmodpy_check_driver():
+    zorder 300
+    timer 0.7 action Function(_rm_check_tick) repeat True
+
+default renmodpy_check_counter = 0
+
+label renmodpy_check_start:
+    $ main_menu = True
+    call screen renmodpy_home
+    $ main_menu = False
+    $ renmodpy_check_counter = 3
+    $ _rm_check_probe.mode = "dialogue-home"
+    narrator "This dialogue waits while you visit Home. Resume brings you back here."
+    $ assert renmodpy_check_counter == 3
+    $ _rm_services.records().create({"title": "Before save", "body": "A lighthouse note"})
+    $ _rm_check_probe.mode = "records"
+    call screen renmodpy_records
+    $ _rm_check_probe.mode = "saves"
+    call screen renmodpy_saves
+    $ renmodpy_check_counter = 1
+    $ _rm_check_probe.mode = "configure-board"
+    call renmodpy_tactics from renmodpy_check_tactics_return
+    $ assert _rm_check_probe.phase == "reload" and _return == "skipped"
+    $ _rm_check_probe.mode = "saved-catalog"
+    call screen renmodpy_saves
+    python:
+        assert _rm_check_probe.phase == "reload"
+        _rm_services.finish_story("Native probe finished")
+        assert _rm_services.resume_slot() is None
+        entries = _rm_services.save_catalog()
+        assert len(entries) == 1, "Completion lost named checkpoints"
+        entry = entries[0]
+        _rm_services.overwrite_save(entry["slot"], entry["fingerprint"], "Overwritten", "Completed")
+        try:
+            _rm_services.delete_save(entry["slot"], entry["fingerprint"])
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("A stale delete removed an overwritten checkpoint")
+        current = _rm_services.save_catalog()[0]
+        _rm_services.delete_save(current["slot"], current["fingerprint"])
+        assert not _rm_services.save_catalog()
+        assert len(_rm_services.records().list()) == 2
+        _rm_check_write("passed.json", {"result": "passed", "engine": renpy.version_string,
+            "checks": ["home/records/saves rendered", "dialogue/home/resume round trip",
+                "populated save browser rendered", "native board rendered",
+                "durable resume exact slot", "named checkpoint create/overwrite/delete",
+                "real engine restart/load", "board and camera restored", "story variable restored",
+                "newer records preserved", "completion clears resume but keeps named checkpoints"]})
+        renpy.quit(status=0, save=False)

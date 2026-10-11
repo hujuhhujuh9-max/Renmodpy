@@ -1,0 +1,18 @@
+{
+  "package": "org.renmodpy.example",
+  "name": "RenModPy Native Example",
+  "icon_name": "RenModPy",
+  "version": "0.1.0",
+  "numeric_version": 1,
+  "orientation": "portrait",
+  "permissions": [],
+  "include_pil": false,
+  "include_sqlite": false,
+  "layout": null,
+  "source": false,
+  "google_play_key": null,
+  "google_play_salt": null,
+  "expansion": false,
+  "update_always": true,
+  "update_icons": true
+}
