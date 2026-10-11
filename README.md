@@ -104,10 +104,17 @@ RenFletPy is the behavioral benchmark. See [feature parity](docs/feature-parity.
 for implemented features and remaining Android-service/control gaps, and
 [authoring](docs/authoring.md) for an integrated app/story project.
 
-The validation APK compiles through RAPT. Emulator startup is blocked by a
-missing dependency in the CI emulator action; Android app/input/lifecycle
-acceptance and AAB builds remain unverified. See the [Codex handoff](docs/codex-handoff.md)
-for the exact blocker. Rive/Lottie and richer controls are
+The [Android validation run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38178146432)
+passes on Android 15/API 35 x86_64: real input, cold Resume, older Quick load,
+named save/overwrite/load/delete and replay preserve the continuous app/story
+session and current Records/settings. A startup save-boundary fix prevents the
+first-dialogue cold Resume crash found by the emulator. All 42 Python tests and
+both native renderer checks pass. The [Codex handoff](docs/codex-handoff.md)
+links the receipts, screenshots and disposable validation APK.
+
+Physical-device/ARM, broader Android lifecycle/services, AAB and update
+acceptance remain pending. Full RenFletPy parity is still work ahead.
+Rive/Lottie and richer controls are
 optional additions when a concrete use case needs them. WebView is out of
 scope. See the
 [migration status](docs/migration.md) and [source provenance](docs/provenance.md).

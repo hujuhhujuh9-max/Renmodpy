@@ -81,3 +81,8 @@ Engine flow/save operations run on Ren'Py's owning thread; Android view work
 runs on Android's UI thread. Projects choose fonts and assets suitable for
 their text. The standard/larger reading setting uses Ren'Py's native font-size
 preference and applies to native screens as well as dialogue.
+
+Records fields and the named-checkpoint field can be tapped to enable or
+disable editing. Deselecting the input closes Android's keyboard so the screen
+actions are available. Menu headings wrap within their allotted width,
+including when the larger reading preference is selected.

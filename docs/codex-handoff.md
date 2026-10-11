@@ -1,8 +1,9 @@
 # Codex handoff
 
+RenModPy's native app/story foundation now passes Android emulator acceptance.
 Read [vision.md](vision.md), [user-prompts.md](user-prompts.md) and `AGENTS.md`
-first. The intended result is one continuous Android-only modified Ren'Py
-application with RenFletPy as the quality benchmark.
+before continuing. The product remains one continuous Android-only modified
+Ren'Py application, with SDK-/RenFletPy as the quality benchmark.
 
 The user clarified the niche as "Ren'Py++": modified Ren'Py with focused
 additions for Python stories, visual novels and integrated Android app screens.
@@ -14,102 +15,116 @@ Apply later user corrections when interpreting voice-transcription errors.
 - Repository: `hujuhhujuh9-max/Renmodpy`.
 - Review branch: `bootstrap/native-foundation`.
 - Draft review: [PR #1](https://github.com/hujuhhujuh9-max/Renmodpy/pull/1).
-- Current engine/test code: `34116ba0dc892f231bf631e99729e4f3d45bf474`.
+- Verified engine/test revision: `96eaeb21acf4a87525b84fcbe5f4a128c2966e06`.
 - Donor benchmark: SDK- `0fc79f001b2177a9a31dea31fd781b4cc298a510`.
-- Ren'Py/RAPT inputs are pinned in `sdk-lock.json`; provenance is retained.
+- Locked Ren'Py component: `0d58d1fc5b5fed87cb0f54eb717233d05643f506`.
+- Ren'Py/RAPT archives, checksums and notices remain pinned in `sdk-lock.json`.
 
-The user has not requested a merge or an application release. Keep changes
-reviewable. Their latest instruction is to stop on another environment blocker
-and leave this handoff for Codex to continue in a better environment.
+The user renewed work in Codex and asked RenModPy to carry forward SDK-'s
+strengths. Their README vision addition is retained, and the continuation
+prompt is preserved verbatim. Work remains on the draft branch; no merge or
+application release has been requested.
 
-## Implemented
+## Implemented and verified
 
-The assembled SDK contains native Home/Return/Resume, named checkpoints,
-quick saves, history, persistent reading settings, full story replay and
-editable Records. Record forms support custom fields, independent collections,
-multiline input, stale-edit protection and preserving a draft on failed writes.
-Application Records remain independent of story snapshots. The example now
-explicitly opens Home through its `main_menu` label.
+The assembled SDK includes native Home/Return/Resume, named checkpoints,
+quick saves, story history, persistent reading settings, full story replay and
+editable Records. Forms support custom fields, independent collections,
+multiline input, stale-edit protection and draft recovery. Application Records
+remain independent of story snapshots. Tactics remains a regression example.
 
-The tactics example is a regression fixture for versioned activity state,
-rendering and save/load. It is not the main product. Rich controls and Android
-services are still incomplete; use [feature-parity.md](feature-parity.md), not
-an assumption of full RenFletPy parity.
+The [completed CI run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38178146432)
+passes all three jobs at the verified revision:
 
-## Verification and current Android attempt
+- 42 Python state/storage/form/build tests.
+- Real engine compile/lint, rendered menus, record editing, named saves,
+  quick load, replay, Android distribution-input checks and the new ordinary
+  startup/first-dialogue cold-load regression with both Linux renderers.
+- RAPT APK compilation and real Android interaction on a rooted Android 15 /
+  API 35 x86_64 emulator, at 720×1280 and 160 dpi.
 
-41 Python state/storage/form/build tests pass. Clean CI also passes real native
-engine compile/lint, menu continuity, records editing, save/delete/load,
-quick-load, full replay and Android distribution-input checks with both Linux
-renderers. These checks do not establish Android runtime acceptance.
+The Android harness drives ADB taps and keyboard events; its APK observer only
+reports state. The six completed acceptance checks cover:
 
-The managed local workspace intermittently showed a deleted save file returning
-after a native subprocess. The exact deletion/replay assertions passed in clean
-CI with both renderers. The local discrepancy's cause was not isolated; no
-speculative engine filesystem patch was retained.
+1. Home/history/settings/Records navigation and Return to the waiting dialogue.
+2. Force-stop/relaunch and durable Resume of the first dialogue, with Records
+   and newer reading preferences intact.
+3. A story choice followed by Quick load restoring the earlier dialogue and
+   clearing that choice without rewinding Records or reading settings.
+4. Native save-name input, checkpoint creation, confirmed overwrite, another
+   process restart and confirmed named-load of the chosen dialogue.
+5. Replay clearing story history/choice state while keeping application
+   Records, reading settings, quick and named checkpoints.
+6. Cancelled deletion retaining the checkpoint and confirmed deletion removing
+   only that checkpoint.
 
-The workspace has no `adb`, `emulator` or `sdkmanager`. An Android CI job was
-added instead. Its first attempt failed because the runner lacked SDK tools;
-explicit `android-actions/setup-android` installation was then added.
+The Records screenshot shows the Android software keyboard during entry.
+Menu headings now fit their reserved width, including with larger text, and
+the save-name field can be deselected to close the keyboard.
 
-The next attempt installed the Android SDK and **successfully built the APK**
-through RAPT. The validation output was
-`org.renmodpy.example-0.1.0-1791754327-release.apk`, signed with the disposable
-test key. The emulator action then failed before launching the emulator:
+## Evidence and validation APK
 
-```text
-Error: Cannot find module '@actions/core'
-.../ReactiveCircus/android-emulator-runner/ed009f5318f15b1cf93a191b856c4f1748a2d4c1/lib/main.js
-code: 'MODULE_NOT_FOUND'
-```
+The original receipts, APK checksum and engine/example input hashes are
+preserved in [android-acceptance.json](android-acceptance.json). Downloaded CI
+input hashes were compared with the review code and match. Later documentation
+updates do not change those engine/example inputs.
 
-**Stopped at this blocker, as the user requested.** No emulator boot,
-installation into an emulator, Android app launch, input test or restart test
-completed. The Android observer and ADB harness remain unvalidated on Android.
-Do not treat APK compilation as an emulator pass. Do not retry this action
-indefinitely in the current environment.
+- [Android job and log](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38178146432/job/114584809573)
+- [Android state, screenshots, logcat and build receipt](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38178146432/artifacts/11717385651)
+- [Disposable validation APK and checksum receipt](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38178146432/artifacts/11717196333)
+- [Both native renderer receipts and screenshots](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38178146432/artifacts/11716906792)
 
-Evidence and exact source revision:
+The artifact retention period is 14 days, expiring on 2026-10-25. The committed
+receipt remains available after the downloadable artifacts expire.
 
-- [Android test run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38176677164)
-- [Android APK/emulator job](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38176677164/job/114580424248)
-- [Parallel push run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38176673405)
-- [Build log and receipt artifact](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38176677164/artifacts/11715594829)
+The APK is `org.renmodpy.example-0.1.0-1791755612-release.apk`, targeting API 36.
+Its SHA-256 is
+`e33644a07ad48548b490fbb7fce365affba15245478b5347ea8928afff2e1662`.
+Despite RAPT's filename, this is a disposable test fixture with a temporary
+signing key and read-only observer; the build receipt marks `release: false`.
 
-`scripts/build_android_check.py` builds a disposable validation APK using the
-ordinary RAPT path and a temporary test signing key. `scripts/android_probe.rpy`
-is a read-only observer copied into that test project. It does not call app
-actions. `scripts/check_android.py` drives actual ADB taps and text events, then
-checks force-stop/relaunch, durable Resume and loading an older quick save
-without rewinding newer Records or reading preferences.
+## Blockers resolved during continuation
 
-The configured emulator is Android 15/API 35, x86_64, with a Nexus 5 profile.
-The APK targets API 36. This one emulator cannot establish physical-device,
-ARM, performance or complete Android-service acceptance. The validation APK
-contains the observer and uses a disposable key; it is not a release build.
+The earlier [Android attempt](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38176677164)
+built an APK but failed before emulator boot because the emulator action could
+not import `@actions/core`. The previous session stopped there as requested.
+Codex replaced that action with SDK-'s direct SDK/AVD startup and first-use
+setup, and removed the redundant review-branch push run.
 
-The `android-emulator-check` artifact from this attempt contains only the build
-log and build receipt. No emulator screenshots, state, logcat or `passed.json`
-were produced. Future successful runs should upload those files; `passed.json`
-is written only if all emulator assertions finish. A green host/native job does
-not replace a green Android job or this Android receipt.
+The [first booted emulator run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38177385705)
+then exposed a cold Resume crash: loading a save on the first dialogue restored
+past initialized history/defaults. Logcat reported `_history` missing, followed
+by an observer error for `_history_list`. A normal-startup host reproduction
+also failed by re-executing defaults. Existing probes skipped the main menu and
+saved after completed interactions, so they had not covered this path.
 
-## Continue in an Android-capable environment
+`engine/patches/startup-load-boundary.patch` restores the required startup save
+boundaries using the existing load-frame flag. Assembly applies it to the
+locked donor source, removes the stale compiled startup script and records its
+hash. Player rollback remains removed. New native and Android regressions now
+pass this previously failing path.
 
-Use Linux x86_64 and Python 3.12+ for SDK assembly, JDK 21, Android SDK platform
-36/build-tools 36, `adb` and a working Android emulator. Read
-[build-environment.md](build-environment.md) for pinned/offline build inputs.
+The older handoff reported an intermittent local deleted-save discrepancy.
+The complete current local native run and both clean CI renderer runs pass the
+same deletion checks; no speculative filesystem change was made.
 
-```bash
-python3 -m unittest discover -s tests -t . -v
-python3 build_sdk.py
-python3 scripts/build_android_check.py --sdk .renmodpy-build/renmodpy-sdk
-# With the rooted validation emulator running:
-python3 scripts/check_android.py
-```
+## Continue from this foundation
 
-`ANDROID_HOME` must point to the installed SDK. Assembly needs a fresh output
-directory. The ADB harness expects the rooted CI emulator, not a user's phone.
-If Android fails, inspect the build log, logcat, state and screenshots before
-changing engine code. Respect the user's stop instruction in the current
-environment; use the handoff rather than repeatedly adding workarounds.
+Use [feature-parity.md](feature-parity.md) for capability gaps. Physical-device
+and ARM acceptance, Unicode Android input, rotation/background recovery,
+board touch/camera acceptance, Android service operations, AAB packaging and
+same-key updates remain unverified. Audio/video/ATL and richer app controls
+still need representative native fixtures or implementation. The x86_64
+emulator pass establishes the six checks above, not full RenFletPy parity.
+
+Keep Ren'Py/SDL as the startup/rendering/story/Python owner. Added functionality
+belongs in the engine's Python API, common screens or native Android support.
+Keep application data independent of story saves and keep the existing camera,
+location, recording and rollback choices.
+
+Build setup and commands are in [build-environment.md](build-environment.md).
+Local commands require Linux x86_64, Python 3.12+, JDK 21, Android SDK platform
+36/build-tools 36, `adb` and an emulator; CI supplies KVM. The native check can
+run without an Android device. SDK assembly requires a fresh output directory,
+and the ADB harness must only target a disposable rooted emulator. Preserve
+evidence if a new environment blocker prevents further acceptance.

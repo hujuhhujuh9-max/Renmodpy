@@ -34,10 +34,15 @@ its script position and board state while reading the current record file.
 Old SDK- preferences records and story bookmarks are not automatically migrated;
 their storage/key names and saved module identities differ.
 
-The first Android build and physical-device acceptance must verify keyboard
-entry, Home/Resume, named saves, cold recovery, records preservation, and
-board input/rendering. Import checks and Linux probes do not prove those
-Android behaviors.
+The Android 15/API 35 x86_64 emulator now verifies keyboard entry, Home/Resume,
+named saves, cold process restart, older Quick load, Records/preferences
+preservation and replay. A local engine patch fixes first-dialogue saves
+restoring across startup initialization. The acceptance receipt and source
+identity are recorded in [Codex handoff](codex-handoff.md).
+
+Physical-device/ARM, Unicode Android input, rotation/background recovery,
+board touch/rendering, Android services and AAB/update acceptance remain
+pending. Import checks and Linux probes do not establish these device results.
 
 See [feature parity](feature-parity.md) for the RenFletPy benchmark, current
 evidence and remaining gaps, and [authoring](authoring.md) for one app/story

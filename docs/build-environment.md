@@ -54,3 +54,44 @@ Before accepting Android support, build and install on a device and verify:
 
 The engine includes its own added Python package in the normal Ren'Py tree.
 There is no separate app server or second Python interpreter to launch.
+
+## Android emulator validation
+
+The Android CI job installs JDK 21, Android SDK platform 36/build-tools 36,
+`adb`, the emulator and the Android 15/API 35 `google_apis` x86_64 image. It
+creates an isolated Pixel 2 AVD, starts it directly with KVM and SwiftShader,
+and waits for Android to finish booting. This follows SDK-'s working emulator
+setup and avoids the failed emulator action. Pull-request updates run one
+validation workflow; the additional branch push run has been removed.
+
+With that toolchain installed and `ANDROID_HOME` set:
+
+```bash
+python3 build_sdk.py --output .renmodpy-build/android-sdk
+python3 scripts/build_android_check.py --sdk .renmodpy-build/android-sdk
+# Start a disposable rooted Android emulator before this command:
+python3 scripts/check_android.py
+```
+
+The harness clears `org.renmodpy.example` data. It requires an emulator and
+root before installation/data clearing, so it is unsuitable for a user's
+phone. The APK targets API 36 and uses a temporary test signing key; it contains
+a read-only observer that never calls app actions. The harness drives ADB taps
+and keyboard events through the built-in screens. It tests the first dialogue's
+cold Resume, restoration of an older quick save after making a story choice,
+named save/overwrite/load/delete confirmations and replay. Application Records
+and current reading preferences must survive story restoration and replay.
+
+Successful runs write `.renmodpy-build/android-check/passed.json`. Screenshots,
+last observed state, logcat and the emulator log are uploaded in the
+`android-emulator-check` artifact, alongside the APK build log and checksum
+receipt. A green Android job also uploads `android-validation-apk` with the
+disposable APK and build receipt. These are validation artifacts, not an
+application release. A failed or interrupted run must not retain `passed.json`.
+
+The native check separately tests ordinary main-menu startup followed by cold
+Home Resume/Quick load on the first dialogue. The local engine patch prevents
+save restoration from crossing initialization; assembly records the patch's
+hash and removes the stale compiled startup script. Android runtime acceptance
+still requires the emulator job's actual interaction result. See
+[Codex handoff](codex-handoff.md) for recorded runs and remaining device coverage.
