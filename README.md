@@ -4,6 +4,10 @@ One Android-only modified Ren'Py SDK, with app features integrated into its
 Python runtime and native screens. Ren'Py/SDL owns rendering, story flow and
 Android startup. This fork does not require Flet, Flutter or Dart.
 
+The user's [vision](docs/vision.md) and [original prompts](docs/user-prompts.md)
+are preserved in the repository. See the [Codex handoff](docs/codex-handoff.md)
+for current work, Android test status and continuation instructions.
+
 This first foundation reuses the modified Ren'Py 8.5.3 and RAPT inputs from
 [`hujuhhujuh9-max/SDK-`](https://github.com/hujuhhujuh9-max/SDK-), pinned by
 commit and archive SHA-256. Player rollback is already removed in the donor.
@@ -66,8 +70,10 @@ RenFletPy is the behavioral benchmark. See [feature parity](docs/feature-parity.
 for implemented features and remaining Android-service/control gaps, and
 [authoring](docs/authoring.md) for an integrated app/story project.
 
-Android APK/AAB builds and physical-device input, keyboard and lifecycle tests
-remain unverified in this foundation. Rive/Lottie and richer controls are
+The validation APK compiles through RAPT. Emulator startup is blocked by a
+missing dependency in the CI emulator action; Android app/input/lifecycle
+acceptance and AAB builds remain unverified. See the [Codex handoff](docs/codex-handoff.md)
+for the exact blocker. Rive/Lottie and richer controls are
 optional additions when a concrete use case needs them. WebView is out of
 scope. See the
 [migration status](docs/migration.md) and [source provenance](docs/provenance.md).

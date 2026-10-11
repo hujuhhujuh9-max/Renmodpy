@@ -1,5 +1,12 @@
 # Working on RenModPy
 
+Read `docs/vision.md`, `docs/user-prompts.md` and `docs/codex-handoff.md` before
+continuing. Preserve the user's original prompts and update the handoff with
+actual results. The user expects Android emulator testing; Linux tests and
+distribution inputs alone do not establish Android runtime acceptance. Their
+latest instruction is to stop at another installation/testing environment
+blocker here and leave the work for Codex in an Android-capable environment.
+
 The product is one Android-only modified Ren'Py SDK. Ren'Py/SDL owns startup,
 rendering, story flow, and the Python interpreter. Features imported from SDK-
 must be integrated into RenModPy; do not reintroduce Flet, Flutter, Dart, or a

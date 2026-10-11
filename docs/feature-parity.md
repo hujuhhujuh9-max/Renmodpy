@@ -28,7 +28,7 @@ and [capability assessment](https://github.com/hujuhhujuh9-max/SDK-/blob/0fc79f0
 | JSON editor, sortable tables, color controls, cancellable async loaders and charts | Reusable native equivalents still need implementation and representative interaction/output checks |
 | Clipboard, picker/sharing, secure storage, haptics and other Android services | Native engine APIs and device tests still needed for the donor's exercised operations |
 | Deep links and lifecycle/device coverage | RenModPy-specific acceptance pending |
-| Project creation, release packaging and update acceptance | Existing Ren'Py/RAPT workflows retained; RenModPy APK/device/update validation pending |
+| Project creation, release packaging and update acceptance | RAPT validation APK compiles; emulator startup blocked, app/device/update acceptance pending |
 | Rive/Lottie | Optional native integration when a concrete use case requires these formats |
 | WebView | Out of scope by product choice |
 | Phone camera, GPS and audio recording | Remain disabled |
@@ -36,7 +36,9 @@ and [capability assessment](https://github.com/hujuhhujuh9-max/SDK-/blob/0fc79f0
 The implemented core is tested with the real modified engine on Linux and with
 the launcher's Android distribution step. These checks do not establish Android
 keyboard, touch, JNI, process-death recovery, media output or physical-device
-performance. Full RenFletPy parity has not yet been established.
+performance. A validation APK now compiles, but the emulator action failed
+before boot; see [Codex handoff](codex-handoff.md). Full RenFletPy parity has
+not yet been established.
 
 Every follow-up feature should include its native implementation, integration
 with the existing app/story session and the relevant save/lifecycle checks.
