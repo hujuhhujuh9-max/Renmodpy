@@ -39,6 +39,8 @@ jobs:
         run: python3 build_sdk.py
       - name: Compile, lint, render, save, restart and check Android distribution
         run: xvfb-run -a -s '-screen 0 1080x1920x24' python3 scripts/check_native.py --sdk .renmodpy-build/renmodpy-sdk
+      - name: Check headless software rendering and save continuity
+        run: SDL_VIDEODRIVER=dummy RENPY_RENDERER=sw python3 scripts/check_native.py --sdk .renmodpy-build/renmodpy-sdk --output .renmodpy-build/native-check-software
       - name: Upload native check evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
@@ -48,6 +50,9 @@ jobs:
             .renmodpy-build/native-check/*.log
             .renmodpy-build/native-check/*.json
             .renmodpy-build/native-check/*.png
+            .renmodpy-build/native-check-software/*.log
+            .renmodpy-build/native-check-software/*.json
+            .renmodpy-build/native-check-software/*.png
             .renmodpy-build/renmodpy-sdk/renmodpy-build.json
           if-no-files-found: warn
           retention-days: 14
