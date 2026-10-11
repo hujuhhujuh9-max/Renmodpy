@@ -66,3 +66,7 @@ See [vision.md](vision.md) for the product interpretation and
 ## 13
 
 > Add to the readme so my hopes are still engraved there.
+
+## 14 — Codex continuation
+
+> Hujuhhujuh9-max, renpymod and SDK repositories. Work on renpymod 😢, I want renpymod to carry the glory of sdk that we are not continuing

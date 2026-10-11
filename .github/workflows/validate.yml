@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python3 -m unittest discover -s tests -t . -v
-      - run: python3 -m compileall -q engine/python prepare.py build_sdk.py scripts/check_native.py
+      - run: python3 -m compileall -q engine/python prepare.py build_sdk.py scripts
 
   native:
     name: Native Ren'Py save and screen checks
@@ -111,4 +111,13 @@ jobs:
             .renmodpy-build/android-build/build.json
             .renmodpy-build/android-check/
           if-no-files-found: warn
+          retention-days: 14
+      - name: Upload disposable validation APK
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: android-validation-apk
+          path: |
+            .renmodpy-build/android-build/apks/*.apk
+            .renmodpy-build/android-build/build.json
+          if-no-files-found: error
           retention-days: 14

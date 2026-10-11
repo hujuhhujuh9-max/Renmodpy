@@ -72,6 +72,22 @@ def check(sdk, output):
                 raise RuntimeError("Quick load or replay did not finish its assertions.")
         receipt["checks"].extend(["quick save restores exact story/board state after restart",
             "replay resets story/history while keeping records, reading settings, quick and named saves"])
+        # The earlier driver skips the main menu and saves after completed
+        # interactions. Also cover a save on the very first waiting dialogue
+        # and load it through the ordinary Home screen in fresh processes.
+        with tempfile.TemporaryDirectory(prefix="startup-", dir=output) as directory:
+            startup_project = Path(directory)
+            shutil.copytree(sdk / "renmodpy-example", startup_project, dirs_exist_ok=True,
+                            ignore=IGNORE_PROJECT)
+            shutil.copy2(ROOT / "scripts/startup_probe.rpy", startup_project / "game/startup_probe.rpy")
+            for phase in ("save", "resume", "quick"):
+                (output / ("startup-" + phase + "-passed.json")).unlink(missing_ok=True)
+                run("startup-" + phase, project_path=startup_project,
+                    RENMODPY_STARTUP_PHASE=phase, RENPY_SKIP_MAIN_MENU="",
+                    RENMODPY_CHECK_SAVEDIR=str(startup_project / "saves"))
+                if phase != "save" and json.loads((output / ("startup-" + phase + "-passed.json")).read_text()).get("result") != "passed":
+                    raise RuntimeError("First-dialogue Home load did not finish: " + phase)
+        receipt["checks"].append("ordinary startup and fresh-process Home Resume/Quick load restore the first dialogue")
         for screen in ("home", "records", "records-edit", "records-saved", "saves", "dialogue",
                        "story-home", "history", "settings", "saved-catalog", "replay-confirm",
                        "tactics", "reloaded-tactics"):

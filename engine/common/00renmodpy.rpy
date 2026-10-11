@@ -219,7 +219,7 @@ screen renmodpy_history():
             spacing 18
             hbox:
                 spacing 18
-                text "Story history" style "renmodpy_heading" xmaximum 440
+                text "Story history" style "renmodpy_heading" xsize 440 layout "greedy"
                 textbutton "Home" action ShowMenu("renmodpy_home")
             for entry in _history_list:
                 frame:
@@ -253,7 +253,7 @@ screen renmodpy_settings():
             spacing 24
             hbox:
                 spacing 18
-                text "Reading settings" style "renmodpy_heading" xmaximum 440
+                text "Reading settings" style "renmodpy_heading" xsize 440 layout "greedy"
                 textbutton "Home" action ShowMenu("renmodpy_home")
             text ("Text size: Larger" if _preferences.font_size > 1.0 else "Text size: Standard"):
                 style "renmodpy_caption"
@@ -296,7 +296,7 @@ screen renmodpy_records(collection="records", title="Records", fields=renmodpy.D
             spacing 14
             hbox:
                 spacing 18
-                text _rm_literal(title) style "renmodpy_heading" xmaximum 440
+                text _rm_literal(title) style "renmodpy_heading" xsize 440 layout "greedy"
                 textbutton "Home" action ShowMenu("renmodpy_home")
             text "Application data stays current when a story is loaded." style "renmodpy_caption"
             for field in form.fields:
@@ -353,6 +353,7 @@ screen renmodpy_saves():
     tag menu
     style_prefix "renmodpy"
     default save_name = ""
+    default save_input = ScreenVariableInputValue("save_name")
     default message = ""
     $ entries, read_error = _rm_save_catalog()
     add Solid("#101d27")
@@ -363,13 +364,14 @@ screen renmodpy_saves():
         spacing 16
         hbox:
             spacing 18
-            text "Saved games" style "renmodpy_heading"
+            text "Saved games" style "renmodpy_heading" xsize 440 layout "greedy"
             textbutton "Home" action ShowMenu("renmodpy_home")
         if not main_menu:
             text "Name this checkpoint" style "renmodpy_caption"
-            frame:
+            button:
                 xfill True
-                input value ScreenVariableInputValue("save_name") length 80 xsize 600
+                action save_input.Toggle()
+                input value save_input length 80 xsize 600
             textbutton "Create save":
                 xfill True
                 action Function(_rm_save_action, "create", name=save_name)

@@ -44,6 +44,12 @@ def assemble(inputs, output, *, with_android=True):
         sdk = stage / "sdk"
         shutil.copytree(source, sdk, ignore=shutil.ignore_patterns("rapt", "__pycache__"),
                         symlinks=True)
+        for patch in sorted((ROOT / "engine/patches").glob("*.patch")):
+            subprocess.run(["patch", "--batch", "--forward", "-p1"],
+                           input=patch.read_bytes(), cwd=sdk, check=True)
+        # Engine patches must be compiled from their changed source rather
+        # than a compiled common script retained by a previous SDK run.
+        (sdk / "renpy/common/00start.rpyc").unlink(missing_ok=True)
         shutil.copytree(ROOT / "engine/python/renmodpy", sdk / "renpy/renmodpy",
                         ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
         for path in (ROOT / "engine/common").glob("*.rpy"):

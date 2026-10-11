@@ -23,6 +23,15 @@ donor's `runtime/story_ui.py` behavior using Ren'Py's own history, preferences,
 save system and restart path. The form draft/controller contains ordinary data;
 RecordStore ownership remains outside story saves.
 
+`engine/patches/startup-load-boundary.patch` corrects the donor's removal of
+startup save boundaries in `renpy/savestate.py` and `renpy/common/00start.rpy`.
+Those files originate in the locked Ren'Py component commit
+`0d58d1fc5b5fed87cb0f54eb717233d05643f506`. The patch retains the original
+notices and uses the existing `not_greedy` load-frame flag to prevent restoring
+past initialized history/defaults when saving on the first dialogue. It adds
+no player rollback API or rewind history. Host and Android acceptance exercise
+ordinary main-menu startup and cold Resume of that first interaction.
+
 The tactics model and renderer were originally adapted by SDK- from the
 owner's 2d-test commit `7dc24c50ef8900ede31dd4bcdc01422b55d5addb`.
 

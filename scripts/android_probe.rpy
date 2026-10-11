@@ -12,6 +12,7 @@ init 900 python:
     _rm_android_probe = _rm_android_types.ModuleType("renmodpy_android_probe")
     _rm_android_sys.modules[_rm_android_probe.__name__] = _rm_android_probe
     _rm_android_probe.boot = _rm_android_uuid.uuid4().hex
+    _rm_android_probe.sequence = 0
     if renpy.android:
         from jnius import autoclass as _rm_android_autoclass
         _rm_android_activity = _rm_android_autoclass("org.renpy.android.PythonSDLActivity").mActivity
@@ -29,6 +30,7 @@ init 900 python:
         return "".join(_rm_android_widget_name(child) for child in widget.visit())
 
     def _rm_android_observe():
+        _rm_android_probe.sequence += 1
         screens = [name for name in ("main_menu", "say", "choice", "confirm", "renmodpy_home",
             "renmodpy_records", "renmodpy_settings", "renmodpy_history", "renmodpy_saves",
             "renmodpy_tactics") if renpy.get_screen(name)]
@@ -40,13 +42,15 @@ init 900 python:
             if name:
                 buttons.append({"name": name, "rect": [focus.x, focus.y, focus.w, focus.h]})
         input_value, editable = renpy.get_editable_input_value()
-        state = {"boot": _rm_android_probe.boot, "android": renpy.android,
+        state = {"boot": _rm_android_probe.boot, "sequence": _rm_android_probe.sequence, "android": renpy.android,
             "engine": renpy.version_string, "screens": screens, "buttons": buttons,
             "physical_size": renpy.get_physical_size(), "virtual_size": [config.screen_width, config.screen_height],
             "main_menu": main_menu, "history": [entry.what for entry in _history_list],
             "font_size": _preferences.font_size, "text_cps": _preferences.text_cps,
             "quick": _rm_services.quick_available(), "resume": _rm_services.resume_slot(),
             "records": _rm_services.records().list(), "saves": _rm_services.save_catalog(),
+            "note_result": getattr(renpy.store, "note_result", None),
+            "input_text": input_value.get_text() if editable and input_value else None,
             "editable_field": getattr(input_value, "key", "save_name") if editable and input_value else None}
         if "renmodpy_records" in screens:
             form = renpy.get_screen_variable("form", screen="renmodpy_records")

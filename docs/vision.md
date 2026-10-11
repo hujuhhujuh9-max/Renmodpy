@@ -11,6 +11,10 @@ RenModPy is a modified Ren'Py SDK focused on Android. Its quality benchmark is
 RenFletPy from `hujuhhujuh9-max/SDK-`. Reuse useful donor behavior and code,
 changing it as needed to fit Ren'Py and Python.
 
+The user renewed work in Codex on 2026-10-11 and asked RenModPy to carry
+forward SDK-'s strengths as SDK- development ends. Continue the existing
+foundation and verify its Android behavior before expanding the feature set.
+
 Home, application screens, dialogue, choices and activities belong to one
 continuous application and project. Ren'Py/SDL owns startup, rendering, story
 flow and the Python interpreter. Added features belong inside the modified
@@ -54,11 +58,12 @@ Build the APK, install it on a real Android emulator or device, exercise actual
 Android input and verify saves, application data and restart behavior. Report
 what was run and what remains unverified.
 
-The user's latest operational instruction is:
+Before handing the project to Codex, the user's operational instruction was:
 
 > Install and if you have trouble stop, because I can ask codex and it has a better environment space.
 
-Stop at another installation/testing blocker in this environment. Preserve
-the prompts, vision, code and exact status for Codex to continue in a better
-environment. Do not keep trying environment workarounds indefinitely. See
-[codex-handoff.md](codex-handoff.md) for the current implementation and checks.
+That session stopped and preserved the prompts, vision and exact blocker.
+The later Codex continuation authorizes renewed work. Keep installation and
+runtime evidence distinct, and preserve a new environment blocker rather than
+retrying environment workarounds indefinitely. See [codex-handoff.md](codex-handoff.md)
+for the current implementation and checks.

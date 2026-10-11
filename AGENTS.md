@@ -3,9 +3,10 @@
 Read `docs/vision.md`, `docs/user-prompts.md` and `docs/codex-handoff.md` before
 continuing. Preserve the user's original prompts and update the handoff with
 actual results. The user expects Android emulator testing; Linux tests and
-distribution inputs alone do not establish Android runtime acceptance. Their
-latest instruction is to stop at another installation/testing environment
-blocker here and leave the work for Codex in an Android-capable environment.
+distribution inputs alone do not establish Android runtime acceptance. The
+earlier session stopped at an emulator-action blocker and handed off to Codex;
+the user has now authorized continuation. If a new installation/testing
+environment blocker prevents acceptance, preserve its evidence in the handoff.
 
 The product is one Android-only modified Ren'Py SDK. Ren'Py/SDL owns startup,
 rendering, story flow, and the Python interpreter. Features imported from SDK-

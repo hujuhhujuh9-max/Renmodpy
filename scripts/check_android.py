@@ -29,10 +29,12 @@ def run(apk, output):
         result = adb("exec-out", "cat", STATE, check=False)
         if result.returncode == 0:
             try:
-                latest = json.loads(result.stdout)
+                current = json.loads(result.stdout)
             except ValueError:
-                pass
-            return latest
+                return {}
+            if isinstance(current, dict):
+                latest = current
+                return current
         return {}
 
     def wait(predicate, message, timeout=60):
@@ -50,28 +52,40 @@ def run(apk, output):
     def capture(name):
         (output / (name + ".png")).write_bytes(adb("exec-out", "screencap", "-p").stdout)
 
+    def tap_point(x, y, current):
+        physical_width, physical_height = current["physical_size"]
+        virtual_width, virtual_height = current["virtual_size"]
+        scale = min(physical_width / virtual_width, physical_height / virtual_height)
+        x = (physical_width - virtual_width * scale) / 2 + x * scale
+        y = (physical_height - virtual_height * scale) / 2 + y * scale
+        adb("shell", "input", "tap", str(round(x)), str(round(y)))
+        wait(lambda s: s["boot"] != current["boot"] or s["sequence"] > current["sequence"],
+             "Android observer did not update after the tap")
+
     def tap(name):
         current = wait(lambda s: any(b["name"] == name for b in s["buttons"]),
                        "No tappable control: " + name)
         button = next(b for b in current["buttons"] if b["name"] == name)
         x, y, width, height = button["rect"]
-        physical_width, physical_height = current["physical_size"]
-        virtual_width, virtual_height = current["virtual_size"]
-        scale = min(physical_width / virtual_width, physical_height / virtual_height)
-        x = (physical_width - virtual_width * scale) / 2 + (x + width / 2) * scale
-        y = (physical_height - virtual_height * scale) / 2 + (y + height / 2) * scale
-        adb("shell", "input", "tap", str(round(x)), str(round(y)))
+        tap_point(x + width / 2, y + height / 2, current)
 
     def enter(field, text):
         if state().get("editable_field") != field:
             tap("field:" + field)
             wait(lambda s: s.get("editable_field") == field, "Field did not receive focus")
         adb("shell", "input", "text", text.replace(" ", "%s"))
-        wait(lambda s: s.get("draft", {}).get(field) == text, "Android text input did not reach the form")
+        wait(lambda s: s.get("input_text") == text, "Android text input did not reach the form")
 
     def home():
         tap("Home")
         screen("renmodpy_home")
+
+    def choose(caption):
+        tap_point(360, 1000, screen("say"))
+        screen("choice")
+        tap(caption)
+        return wait(lambda s: "say" in s["screens"] and "choice" not in s["screens"]
+                    and s["note_result"] is not None, "Story choice did not return to dialogue")
 
     try:
         adb("wait-for-device", timeout=180)
@@ -149,6 +163,8 @@ def run(apk, output):
         assert restored["font_size"] == 1.25 and restored["text_cps"] == 0
         capture("restarted-dialogue")
         checks.append("Force-stop/relaunch and durable Resume preserve story position, private Records and reading preferences")
+        chosen = choose("Keep a copy")
+        assert chosen["history"] != original_history and "kept a copy" in chosen["note_result"]
         home()
         tap("Quick load")
         screen("confirm")
@@ -157,7 +173,68 @@ def run(apk, output):
         assert loaded["history"] == original_history and len(loaded["records"]) == 1
         assert loaded["font_size"] == 1.25 and loaded["text_cps"] == 0
         capture("quick-loaded-dialogue")
-        checks.append("Loading an older Android quick save keeps newer application Records and reading preferences")
+        assert loaded["note_result"] is None
+        checks.append("Loading an older Android quick save restores the earlier dialogue/choice state while keeping newer Records and reading preferences")
+
+        chosen = choose("Share it with Mira")
+        chosen_history = chosen["history"]
+        home()
+        tap("Saved games")
+        screen("renmodpy_saves")
+        enter("save_name", "After choosing")
+        tap("field:save_name")
+        wait(lambda s: s.get("editable_field") is None, "Save-name input stayed active")
+        tap("Create save")
+        saved = wait(lambda s: len(s["saves"]) == 1, "Named checkpoint was not created")["saves"][0]
+        assert saved["name"] == "After choosing" and saved["supported"]
+        tap("Overwrite")
+        screen("confirm")
+        tap("Yes")
+        wait(lambda s: len(s["saves"]) == 1 and s["saves"][0]["fingerprint"] != saved["fingerprint"],
+             "Overwrite did not replace the checkpoint")
+        capture("named-checkpoint")
+        boot = latest["boot"]
+        adb("shell", "am", "force-stop", PACKAGE)
+        adb("shell", "am", "start", "-W", "-n", ACTIVITY)
+        wait(lambda s: s["boot"] != boot and "main_menu" in s["screens"], "Named-save restart failed")
+        tap("Saved games")
+        screen("renmodpy_saves")
+        tap("Load")
+        screen("confirm")
+        tap("Yes")
+        named = screen("say")
+        assert named["history"] == chosen_history and "shared" in named["note_result"]
+        assert len(named["records"]) == 1 and named["font_size"] == 1.25 and named["text_cps"] == 0
+        capture("named-loaded-dialogue")
+        checks.append("Native save-name input, create/confirmed overwrite, process restart and confirmed named-load restore the chosen dialogue")
+
+        home()
+        tap("Replay story")
+        screen("confirm")
+        tap("Yes")
+        replayed = wait(lambda s: "say" in s["screens"] and s["history"] == original_history
+                        and s["note_result"] is None, "Replay did not reset the story and its choice")
+        assert len(replayed["records"]) == 1 and len(replayed["saves"]) == 1 and replayed["quick"]
+        assert replayed["font_size"] == 1.25 and replayed["text_cps"] == 0
+        capture("replayed-dialogue")
+        checks.append("Replay resets story/history/choice state while preserving Records, reading settings, quick and named checkpoints")
+
+        home()
+        tap("Saved games")
+        screen("renmodpy_saves")
+        tap("Delete")
+        screen("confirm")
+        tap("No")
+        retained = wait(lambda s: "confirm" not in s["screens"], "Delete cancellation did not close")
+        assert len(retained["saves"]) == 1
+        tap("Delete")
+        screen("confirm")
+        tap("Yes")
+        deleted = wait(lambda s: not s["saves"], "Confirmed delete did not remove the checkpoint")
+        assert deleted["quick"] and len(deleted["records"]) == 1
+        capture("checkpoint-deleted")
+        checks.append("Cancelling deletion retains the checkpoint; confirming deletes only the named checkpoint")
+
         receipt = {"result": "passed", "platform": "Android emulator", "engine": loaded["engine"],
             "api": adb("shell", "getprop", "ro.build.version.sdk").stdout.decode().strip(),
             "abi": adb("shell", "getprop", "ro.product.cpu.abi").stdout.decode().strip(),
@@ -166,8 +243,14 @@ def run(apk, output):
         print(json.dumps(receipt, indent=2), flush=True)
     finally:
         (output / "last-state.json").write_text(json.dumps(latest, indent=2) + "\n")
-        (output / "logcat.log").write_bytes(adb("logcat", "-d", check=False).stdout)
-        capture("last-screen")
+        for path, command in (("logcat.log", ("logcat", "-d")),
+                              ("last-screen.png", ("exec-out", "screencap", "-p"))):
+            try:
+                result = adb(*command, check=False)
+                if result.returncode == 0:
+                    (output / path).write_bytes(result.stdout)
+            except (OSError, subprocess.SubprocessError) as error:
+                print(f"Could not collect {path}: {error}", flush=True)
 
 
 def main():
