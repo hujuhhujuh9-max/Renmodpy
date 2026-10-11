@@ -34,7 +34,9 @@ and Android packaging.
 | --- | --- |
 | Home / Start / Return / Resume | Ren'Py menu contexts and a durable resume slot |
 | Records | Versioned JSON, atomic writes, stale-edit checks; outside story saves |
+| Reusable record forms | Add/edit/cancel/delete/reload, multiline fields, custom schemas and collections |
 | Named checkpoints | Ren'Py save/load, confirmations and stale-save checks |
+| Quick save/load, history, reading settings, replay | Native save slots, history/preferences and full engine restart |
 | Tactics interlude | Saved board/camera state and a native displayable |
 | Android JNI helpers | Donor class-loader setup; device validation pending |
 
@@ -55,6 +57,14 @@ engine to check that board/story state restores while newer records remain.
 It also creates an Android distribution and verifies that the added engine
 modules and screens are included. It writes screenshots and a receipt under
 `.renmodpy-build/native-check`. CI runs the same check.
+
+The native checks also visit History/Settings/Records without advancing the
+waiting dialogue, edit/reload multiline records, load a quick save after restart
+and replay with fresh story state while keeping application data/preferences.
+
+RenFletPy is the behavioral benchmark. See [feature parity](docs/feature-parity.md)
+for implemented features and remaining Android-service/control gaps, and
+[authoring](docs/authoring.md) for an integrated app/story project.
 
 Android APK/AAB builds and physical-device input, keyboard and lifecycle tests
 remain unverified in this foundation. Rive/Lottie and richer controls are

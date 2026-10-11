@@ -4,5 +4,7 @@ __version__ = "0.1.0"
 
 from .board_session import BoardSession
 from .records import RecordStore, RecordsError
+from .forms import DEFAULT_FIELDS, FormField, RecordDraft
 
-__all__ = ["BoardSession", "RecordStore", "RecordsError", "__version__"]
+__all__ = ["BoardSession", "RecordStore", "RecordsError", "DEFAULT_FIELDS",
+           "FormField", "RecordDraft", "__version__"]

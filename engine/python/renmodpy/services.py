@@ -12,20 +12,21 @@ from .records import RecordStore
 
 
 RESUME_SLOT = "renmodpy-resume"
+QUICK_SLOT = "renmodpy-quick"
 MANUAL_PATTERN = r"renmodpy-manual-[0-9a-f]{32}"
 _engine = None
 _thread = None
-_records = None
+_records = {}
 _data_directory = None
 
 
 def bind(engine, *, data_directory=None):
     global _engine, _thread, _records, _data_directory
     _engine, _thread = engine, threading.get_ident()
-    _records, _data_directory = None, data_directory
+    _records, _data_directory = {}, data_directory
 
 
-def _record_path():
+def _record_path(collection):
     engine = owner()
     data_directory = _data_directory
     if data_directory is None:
@@ -35,7 +36,7 @@ def _record_path():
             data_directory = Path(str(activity.getFilesDir().getAbsolutePath())) / "renmodpy"
         else:
             data_directory = Path(engine.config.savedir) / "application-data"
-    return Path(data_directory) / "records.json"
+    return Path(data_directory) / (collection + ".json")
 
 
 def owner():
@@ -44,12 +45,13 @@ def owner():
     return _engine
 
 
-def records():
-    global _records
+def records(collection="records"):
     owner()
-    if _records is None:
-        _records = RecordStore(_record_path())
-    return _records
+    if not isinstance(collection, str) or re.fullmatch(r"[a-z][a-z0-9_-]{0,47}", collection) is None:
+        raise ValueError("Use a collection name of 1–48 lowercase letters, digits, underscores or hyphens.")
+    if collection not in _records:
+        _records[collection] = RecordStore(_record_path(collection))
+    return _records[collection]
 
 
 def resume_slot():
@@ -60,6 +62,22 @@ def save_resume():
     engine = owner()
     engine.take_screenshot()
     engine.save(RESUME_SLOT, extra_info="Resume story")
+
+
+def quick_available():
+    return owner().can_load(QUICK_SLOT)
+
+
+def save_quick():
+    engine = owner()
+    engine.take_screenshot()
+    engine.save(QUICK_SLOT, extra_info="Quick save")
+
+
+def load_quick():
+    if not quick_available():
+        raise ValueError("There is no quick save yet.")
+    owner().load(QUICK_SLOT)
 
 
 def begin_story():

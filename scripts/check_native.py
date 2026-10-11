@@ -52,17 +52,28 @@ def check(sdk, output):
             print(f"Native check: {name} passed", flush=True)
 
         # A failed new run must not inherit a receipt from an earlier success.
-        for filename in ("passed.json", "checkpoint.json"):
+        for filename in ("passed.json", "runtime-passed.json", "checkpoint.json", "quick-passed.json", "replay-passed.json"):
             (output / filename).unlink(missing_ok=True)
         run("compile", ["compile"])
         run("lint", ["lint"])
         run("save", RENMODPY_CHECK_PHASE="save")
         checkpoint = json.loads((output / "checkpoint.json").read_text())
         run("reload", RENMODPY_CHECK_PHASE="reload", RENPY_AUTO_LOAD=checkpoint["slot"])
-        receipt = json.loads((output / "passed.json").read_text())
+        receipt = json.loads((output / "runtime-passed.json").read_text())
         if receipt.get("result") != "passed":
             raise RuntimeError("Native probe did not finish its assertions.")
-        for screen in ("home", "records", "saves", "dialogue", "story-home", "saved-catalog",
+        remaining = list(project.rglob(checkpoint["slot"] + "*.save"))
+        if remaining:
+            raise RuntimeError("Named checkpoint deletion left files on disk: " + repr(remaining))
+        run("quick-load", RENMODPY_CHECK_PHASE="quick", RENPY_AUTO_LOAD="renmodpy-quick")
+        run("replay", RENMODPY_CHECK_PHASE="replay", RENPY_AUTO_LOAD="renmodpy-quick")
+        for filename in ("quick-passed.json", "replay-passed.json"):
+            if json.loads((output / filename).read_text()).get("result") != "passed":
+                raise RuntimeError("Quick load or replay did not finish its assertions.")
+        receipt["checks"].extend(["quick save restores exact story/board state after restart",
+            "replay resets story/history while keeping records, reading settings, quick and named saves"])
+        for screen in ("home", "records", "records-edit", "records-saved", "saves", "dialogue",
+                       "story-home", "history", "settings", "saved-catalog", "replay-confirm",
                        "tactics", "reloaded-tactics"):
             if not (output / (screen + ".png")).is_file():
                 raise RuntimeError(f"Missing rendered screen: {screen}")

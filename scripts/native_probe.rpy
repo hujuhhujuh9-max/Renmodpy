@@ -15,17 +15,25 @@ init 900 python:
     _rm_check_probe.phase = _rm_check_os.environ.get("RENMODPY_CHECK_PHASE", "save")
     _rm_check_probe.mode = "home"
     config.savedir = _rm_check_os.environ["RENMODPY_CHECK_SAVEDIR"]
-    config.label_overrides["start"] = "renmodpy_check_start"
+    config.label_overrides["start"] = ("renmodpy_check_restarted" if
+        _rm_check_probe.phase == "replay" else "renmodpy_check_start")
     config.performance_test = False
     config.check_conflicting_properties = True
     config.autosave_frequency = None
     config.always_shown_screens.append("renmodpy_check_driver")
+
 
     def _rm_check_write(filename, value):
         (_rm_check_probe.output / filename).write_text(_rm_check_json.dumps(value, indent=2))
 
     def _rm_check_capture(name):
         assert renpy.screenshot(str(_rm_check_probe.output / (name + ".png")))
+
+    def _rm_check_savedirs(name):
+        _rm_check_write(name + ".json", [{"directory": location.directory,
+            "active": location.active, "slots": location.list(),
+            "files": sorted(path.name for path in _rm_check_Path(location.directory).iterdir())}
+            for location in renpy.loadsave.location.locations])
 
     def _rm_check_list(screen, identifier, variable):
         rows = renpy.get_screen_variable(variable, screen=screen)
@@ -36,15 +44,20 @@ init 900 python:
         assert viewport.width > 500 and viewport.height > 200, "List was laid out offscreen"
 
     def _rm_check_after_load():
+        _rm_check_savedirs("after-load-" + _rm_check_probe.phase)
         checkpoint = _rm_check_json.loads((_rm_check_probe.output / "checkpoint.json").read_text())
         actual = _rm_check_json.loads(_rm_check_json.dumps(_renmodpy_board.snapshot()))
         assert actual == checkpoint["board"], "Board/camera did not restore"
         assert renmodpy_check_counter == 1, "Story variables did not restore"
         assert [r["values"]["title"] for r in _rm_services.records().list()] == [
             "Before save", "Newer {application} [data]"], "Loading rolled records back"
-        _rm_check_probe.mode = "reloaded-tactics"
+        assert _preferences.font_size == 1.25 and _preferences.text_cps == 0, "Load rewound reading settings"
+        assert any("This dialogue waits" in (entry.what or "") for entry in _history_list)
+        _rm_check_probe.mode = ("replay-home" if _rm_check_probe.phase == "replay" else "reloaded-tactics")
 
     config.after_load_callbacks.append(_rm_check_after_load)
+    config.before_load_callbacks.append(lambda: _rm_check_savedirs("before-load-" + _rm_check_probe.phase))
+    config.start_callbacks.append(lambda: _rm_check_savedirs("start-" + _rm_check_probe.phase))
 
     def _rm_check_tick():
         mode = _rm_check_probe.mode
@@ -54,6 +67,34 @@ init 900 python:
             _rm_check_capture(mode)
             if mode == "records":
                 _rm_check_list("renmodpy_records", "records_list", "snapshot")
+                snapshot = renpy.get_screen_variable("snapshot", screen="renmodpy_records")
+                form = renpy.get_screen_variable("form", screen="renmodpy_records")
+                inputs = renpy.get_screen_variable("input_values", screen="renmodpy_records")
+                identifier = snapshot["records"][0]["id"]
+                _rm_edit_record(form, snapshot, identifier)
+                assert inputs["title"].get_text() == "Before save"
+                inputs["body"].set_text("Edited note\nwith Unicode Blåbær")
+                temporary = _rm_services.records().create({"title": "Concurrent change"})
+                _rm_submit_record(form, "records", _rm_services.records().snapshot()["revision"])
+                assert form.needs_reload and form.values["body"].startswith("Edited note")
+                _rm_services.records().delete(temporary)
+                _rm_reload_records(form, "records")
+                assert not form.needs_reload and form.editing_id == identifier
+                _rm_check_probe.mode = "records-edit"
+                return None
+            return True
+        if mode == "records-edit":
+            form = renpy.get_screen_variable("form", screen="renmodpy_records")
+            _rm_check_capture(mode)
+            _rm_submit_record(form, "records", _rm_services.records().snapshot()["revision"])
+            row = _rm_services.records().list()[0]
+            assert row["values"]["extra"] == "Keep outside the visible schema"
+            assert row["values"]["body"] == "Edited note\nwith Unicode Blåbær"
+            assert form.editing_id is None and not any(form.values.values())
+            _rm_check_probe.mode = "records-saved"
+            return None
+        if mode == "records-saved":
+            _rm_check_capture(mode)
             return True
         if mode == "dialogue-home":
             if not renpy.get_screen("say"):
@@ -67,6 +108,34 @@ init 900 python:
             assert renmodpy_check_counter == 3
             assert renpy.can_load(_rm_services.RESUME_SLOT)
             _rm_check_capture("story-home")
+            _rm_check_probe.mode = "history-menu"
+            renpy.run(ShowMenu("renmodpy_history"))
+            return None
+        if mode == "history-menu":
+            assert renpy.get_screen("renmodpy_history")
+            assert renmodpy_check_counter == 3
+            assert any("This dialogue waits" in (entry.what or "") for entry in _history_list)
+            _rm_check_capture("history")
+            _rm_check_probe.mode = "settings-menu"
+            renpy.run(ShowMenu("renmodpy_settings"))
+            return None
+        if mode == "settings-menu":
+            assert renpy.get_screen("renmodpy_settings")
+            _rm_reading_preference("font size", 1.0)
+            _rm_reading_preference("text speed", 30)
+            assert _preferences.font_size == 1.0 and _preferences.text_cps == 30
+            _rm_check_capture("settings")
+            _rm_check_probe.mode = "records-menu"
+            renpy.run(ShowMenu("renmodpy_records"))
+            return None
+        if mode == "records-menu":
+            assert renpy.get_screen("renmodpy_records") and renmodpy_check_counter == 3
+            assert not _rm_services.records().list()
+            _rm_check_probe.mode = "home-back"
+            renpy.run(ShowMenu("renmodpy_home"))
+            return None
+        if mode == "home-back":
+            assert renpy.get_screen("renmodpy_home") and renmodpy_check_counter == 3
             _rm_check_probe.mode = "finish-dialogue"
             return True
         if mode == "finish-dialogue":
@@ -78,10 +147,25 @@ init 900 python:
             _rm_check_capture("saved-catalog")
             _rm_check_list("renmodpy_saves", "saves_list", "entries")
             return True
+        if mode == "replay-confirm":
+            assert renpy.get_screen("renmodpy_home") and renmodpy_check_counter == 1
+            _rm_check_probe.mode = "replay-accept"
+            renpy.run(Show("confirm", message="Restart this story?",
+                yes_action=Function(_rm_restart_story, "start"), no_action=Hide("confirm")))
+            return None
+        if mode == "replay-accept":
+            assert renpy.get_screen("confirm")
+            _rm_check_capture("replay-confirm")
+            renpy.run([Hide("confirm"), Function(_rm_restart_story, "start")])
+            return None
         if not renpy.get_screen("renmodpy_tactics"):
             return None
         board = renpy.get_screen_variable("board", screen="renmodpy_tactics")
         assert board._raster_surface is not None, "Board was not rendered"
+        if mode == "replay-home":
+            _rm_check_probe.mode = "replay-confirm"
+            renpy.run([Function(_rm_return_home), ShowMenu("renmodpy_home")])
+            return None
         if mode == "configure-board":
             assert _renmodpy_board.move_tactics_unit(_renmodpy_board.revision, _rm_check_Cell(1, 0, 0))
             board.change_view(rotation=1, zoom=1.2, opacity=0.55, pan_x=10.0)
@@ -93,11 +177,16 @@ init 900 python:
             _rm_services.save_resume()
             assert _rm_services.resume_slot() == _rm_services.RESUME_SLOT
             assert FileLoad(_rm_services.resume_slot(), slot=True).get_sensitive()
+            _rm_services.save_quick()
+            assert _rm_services.quick_available()
             slot = _rm_services.create_save("Native checkpoint", "The balcony route")
             entry = next(r for r in _rm_services.save_catalog() if r["slot"] == slot)
             assert entry["name"] == "Native checkpoint" and entry["supported"]
             _rm_check_write("checkpoint.json", {"slot": slot, "board": _renmodpy_board.snapshot()})
             _rm_services.records().create({"title": "Newer {application} [data]", "body": "Kept after load"})
+            renpy.run(Preference("font size", 1.25))
+            renpy.run(Preference("text speed", 0))
+            renpy.save_persistent()
             _renmodpy_board.reset_tactics(_renmodpy_board.revision)
             renpy.store.renmodpy_check_counter = 99
             renpy.quit(status=0, save=False)
@@ -121,7 +210,7 @@ label renmodpy_check_start:
     $ _rm_check_probe.mode = "dialogue-home"
     narrator "This dialogue waits while you visit Home. Resume brings you back here."
     $ assert renmodpy_check_counter == 3
-    $ _rm_services.records().create({"title": "Before save", "body": "A lighthouse note"})
+    $ _rm_services.records().create({"title": "Before save", "body": "A lighthouse note", "extra": "Keep outside the visible schema"})
     $ _rm_check_probe.mode = "records"
     call screen renmodpy_records
     $ _rm_check_probe.mode = "saves"
@@ -129,7 +218,14 @@ label renmodpy_check_start:
     $ renmodpy_check_counter = 1
     $ _rm_check_probe.mode = "configure-board"
     call renmodpy_tactics from renmodpy_check_tactics_return
-    $ assert _rm_check_probe.phase == "reload" and _return == "skipped"
+    $ assert _rm_check_probe.phase in ("reload", "quick") and _return == "skipped"
+    if _rm_check_probe.phase == "quick":
+        $ assert _rm_services.quick_available() and len(_rm_services.records().list()) == 2
+        $ _rm_check_savedirs("quick-before-save")
+        $ _rm_services.create_save("Replay checkpoint", "After quick load")
+        $ _rm_check_savedirs("quick-after-save")
+        $ _rm_check_write("quick-passed.json", {"result": "passed"})
+        $ renpy.quit(status=0, save=False)
     $ _rm_check_probe.mode = "saved-catalog"
     call screen renmodpy_saves
     python:
@@ -149,11 +245,25 @@ label renmodpy_check_start:
         current = _rm_services.save_catalog()[0]
         _rm_services.delete_save(current["slot"], current["fingerprint"])
         assert not _rm_services.save_catalog()
+        _rm_check_savedirs("after-delete")
         assert len(_rm_services.records().list()) == 2
-        _rm_check_write("passed.json", {"result": "passed", "engine": renpy.version_string,
+        _rm_check_write("runtime-passed.json", {"result": "passed", "engine": renpy.version_string,
             "checks": ["home/records/saves rendered", "dialogue/home/resume round trip",
+                "history/settings/records menus preserve the dialogue interaction",
+                "record edit/reload keeps drafts and invisible fields", "multiline record input",
+                "reading settings survive restart and older story load",
                 "populated save browser rendered", "native board rendered",
                 "durable resume exact slot", "named checkpoint create/overwrite/delete",
                 "real engine restart/load", "board and camera restored", "story variable restored",
                 "newer records preserved", "completion clears resume but keeps named checkpoints"]})
         renpy.quit(status=0, save=False)
+
+label renmodpy_check_restarted:
+    $ _rm_services.begin_story()
+    $ assert renmodpy_check_counter == 0 and not _history_list
+    $ assert len(_rm_services.records().list()) == 2 and _rm_services.quick_available()
+    $ assert [row["name"] for row in _rm_services.save_catalog()] == ["Replay checkpoint"], repr(_rm_services.save_catalog())
+    $ assert _rm_services.resume_slot() is None
+    $ assert _preferences.font_size == 1.25 and _preferences.text_cps == 0
+    $ _rm_check_write("replay-passed.json", {"result": "passed"})
+    $ renpy.quit(status=0, save=False)

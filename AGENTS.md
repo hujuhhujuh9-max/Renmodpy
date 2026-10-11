@@ -5,6 +5,12 @@ rendering, story flow, and the Python interpreter. Features imported from SDK-
 must be integrated into RenModPy; do not reintroduce Flet, Flutter, Dart, or a
 second Python startup owner.
 
+Use RenFletPy's working user-facing behavior as the quality benchmark. Home,
+app screens and stories must share one live session in the modified engine.
+Track missing capabilities honestly in `docs/feature-parity.md`; integration
+alone is not feature parity. Add required native implementations behind the
+engine's Python API, and keep Android/device acceptance separate from host tests.
+
 Prioritize Python/story syntax, dialogue, story-aware saves and useful app
 screens. Tactics is a regression example, not the main product. WebView is
 out of scope. Rive/Lottie and complex controls require a concrete use case

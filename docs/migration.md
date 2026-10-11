@@ -15,6 +15,8 @@ as a custom-state save test. It is not the main product direction.
 | Home and story Start/Return/Resume | Native example |
 | Records independent of story checkpoints | Atomic private file and native screen |
 | Named story saves and confirmations | Native backend and screen |
+| Quick save/load, history, reading preferences and replay | Native screens and engine APIs |
+| Record edit/cancel/reload, multiline/custom fields and collections | Built-in reusable form and draft recovery |
 | Android JNI worker class-loader helpers | Imported; phone verification pending |
 | Flutter/Flet controls and transport | Not included |
 | WebView | Out of scope |
@@ -36,3 +38,7 @@ The first Android build and physical-device acceptance must verify keyboard
 entry, Home/Resume, named saves, cold recovery, records preservation, and
 board input/rendering. Import checks and Linux probes do not prove those
 Android behaviors.
+
+See [feature parity](feature-parity.md) for the RenFletPy benchmark, current
+evidence and remaining gaps, and [authoring](authoring.md) for one app/story
+project and reusable native Records forms.

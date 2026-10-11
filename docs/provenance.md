@@ -11,10 +11,16 @@ Donor main commit: `0fc79f001b2177a9a31dea31fd781b4cc298a510`.
 | `engine/python/renmodpy/board.py` | `game/tactics_display.py` | Direct BoardSession ownership; Flet/shared bridge removed |
 | `engine/python/renmodpy/board_session.py` | `runtime/renfletpy.py` | Native-only board controller and versioned save state |
 | `engine/python/renmodpy/records.py` | `runtime/application_data.py` | Record validation/identity adapted; atomic file replaces Flet preferences |
+| `engine/python/renmodpy/forms.py` | `runtime/form_list.py`, `docs/form-list.md` | Reusable form/draft recovery behavior implemented with native screen inputs |
 | `engine/python/renmodpy/services.py` | `runtime/save_slots.py` | Native named-save behavior adapted; no Flet command transport |
 | `engine/python/renmodpy/android_jni*.py` | `runtime/android_jni*.py` | JNI helpers retained; executor import made relative |
 | `prepare.py` | `prepare.py` | Preparation restricted to Ren'Py and RAPT |
 | `tests/test_tactics.py` | `tests/test_tactics.py` | Terrain/camera regression cases retained |
+
+Native history, reading settings, quick save/load and replay reproduce the
+donor's `runtime/story_ui.py` behavior using Ren'Py's own history, preferences,
+save system and restart path. The form draft/controller contains ordinary data;
+RecordStore ownership remains outside story saves.
 
 The tactics model and renderer were originally adapted by SDK- from the
 owner's 2d-test commit `7dc24c50ef8900ede31dd4bcdc01422b55d5addb`.

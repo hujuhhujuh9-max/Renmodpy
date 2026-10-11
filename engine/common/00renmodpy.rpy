@@ -10,32 +10,39 @@ init -800 python:
     def _rm_literal(value):
         return str(value).replace("{", "{{").replace("[", "[[")
 
-    def _rm_record_snapshot():
+    def _rm_record_snapshot(collection="records"):
         try:
-            return _rm_services.records().snapshot(), ""
-        except renmodpy.RecordsError as error:
+            return _rm_services.records(collection).snapshot(), ""
+        except (ValueError, renmodpy.RecordsError) as error:
             return {"revision": 0, "records": []}, str(error)
 
-    def _rm_add_record(title, body, revision):
-        try:
-            if not title.strip():
-                raise ValueError("Give the record a title.")
-            _rm_services.records().create({"title": title.strip(), "body": body},
-                                         expected_revision=revision)
-            renpy.set_screen_variable("draft_title", "", screen="renmodpy_records")
-            renpy.set_screen_variable("draft_body", "", screen="renmodpy_records")
-            message = "Record saved."
-        except (ValueError, renmodpy.RecordsError) as error:
-            message = str(error)
-        renpy.set_screen_variable("message", message, screen="renmodpy_records")
+    def _rm_submit_record(form, collection, revision):
+        form.submit(_rm_services.records(collection), revision)
 
-    def _rm_delete_record(identifier, revision):
+    def _rm_edit_record(form, snapshot, identifier):
         try:
-            _rm_services.records().delete(identifier, expected_revision=revision)
-            message = "Record deleted."
+            form.edit(snapshot, identifier)
+        except renmodpy.RecordsError as error:
+            form.message = str(error)
+            form.needs_reload = True
+
+    def _rm_reload_records(form, collection):
+        try:
+            form.reload(_rm_services.records(collection).snapshot())
         except (ValueError, renmodpy.RecordsError) as error:
-            message = str(error)
-        renpy.set_screen_variable("message", message, screen="renmodpy_records")
+            form.message = str(error)
+            form.needs_reload = True
+
+    def _rm_delete_record(identifier, revision, form, collection):
+        try:
+            records = _rm_services.records(collection)
+            records.delete(identifier, expected_revision=revision)
+            form.message = "Record deleted."
+            if form.editing_id == identifier:
+                form.reload(records.snapshot())
+        except (ValueError, renmodpy.RecordsError) as error:
+            form.message = str(error) + " Reload records; your draft is kept."
+            form.needs_reload = True
 
     def _rm_save_catalog():
         try:
@@ -66,12 +73,41 @@ init -800 python:
         except (OSError, ValueError) as error:
             renpy.notify("Resume bookmark could not be saved: " + str(error))
 
+    def _rm_quick_action(action):
+        try:
+            if action == "save":
+                _rm_services.save_quick()
+            else:
+                _rm_services.load_quick()
+            message = "Quick save created."
+        except (OSError, ValueError) as error:
+            message = str(error)
+        renpy.set_screen_variable("message", message, screen="renmodpy_home")
+
+    def _rm_reading_preference(name, value):
+        renpy.run(Preference(name, value))
+        try:
+            renpy.save_persistent()
+            message = "Reading settings saved."
+        except OSError:
+            message = "Reading settings could not be saved. Try again."
+        renpy.set_screen_variable("message", message, screen="renmodpy_settings")
+
+    def _rm_restart_story(story_label):
+        # Start jumps to a label in the existing store. A replay needs the
+        # engine's restart path to reset defaults, call stacks and history.
+        renpy.full_restart(label="renmodpy_restart", target=story_label, save=False)
+
 init 800 python:
     _rm_services.bind(renpy)
 
 default _renmodpy_board = None
 default renmodpy_scene = "Story"
 default persistent.renmodpy_last_result = None
+
+init -700 python:
+    if config.history_length is None:
+        config.history_length = 200
 
 init -700:
     style renmodpy_text is default:
@@ -112,75 +148,180 @@ init -700:
 screen renmodpy_home(story_label="start"):
     tag menu
     style_prefix "renmodpy"
+    default message = ""
     add Solid("#101d27")
-    vbox:
+    viewport:
+        id "home_content"
         xpos 36
-        ypos 60
+        ypos 44
         xsize 648
-        spacing 22
-        text "RenModPy" style "renmodpy_heading"
-        text "Stories and app features in one engine." style "renmodpy_caption"
-        null height 18
-        if main_menu:
-            textbutton "Start story" action Start(story_label) xfill True
-            $ resume_slot = _rm_services.resume_slot()
-            textbutton "Resume story":
-                xfill True
-                sensitive resume_slot is not None
-                action FileLoad(resume_slot, slot=True, confirm=False)
-        else:
-            textbutton "Resume story" action Return() xfill True
-        textbutton "Records" action ShowMenu("renmodpy_records") xfill True
-        textbutton "Saved games" action ShowMenu("renmodpy_saves") xfill True
-        if persistent.renmodpy_last_result:
-            frame:
-                xfill True
-                text _rm_literal(persistent.renmodpy_last_result)
-        textbutton "Close app" action Quit(confirm=True) xfill True
+        ysize 1192
+        draggable True
+        mousewheel True
+        scrollbars "vertical"
+        vbox:
+            xsize 620
+            spacing 18
+            text "RenModPy" style "renmodpy_heading"
+            text "Stories and app features in one engine." style "renmodpy_caption"
+            null height 12
+            if main_menu:
+                textbutton "Start story" action Start(story_label) xfill True
+                $ resume_slot = _rm_services.resume_slot()
+                textbutton "Resume story":
+                    xfill True
+                    sensitive resume_slot is not None
+                    action FileLoad(resume_slot, slot=True, confirm=False)
+            else:
+                textbutton "Resume story" action Return() xfill True
+            hbox:
+                spacing 12
+                textbutton "Quick save":
+                    sensitive not main_menu
+                    action Function(_rm_quick_action, "save")
+                textbutton "Quick load":
+                    sensitive _rm_services.quick_available()
+                    action Show("confirm", message="Load your quick save?",
+                        yes_action=Function(_rm_quick_action, "load"), no_action=Hide("confirm"))
+            if message:
+                text _rm_literal(message) style "renmodpy_caption"
+            textbutton "Records" action ShowMenu("renmodpy_records") xfill True
+            textbutton "Saved games" action ShowMenu("renmodpy_saves") xfill True
+            textbutton "Story history" action ShowMenu("renmodpy_history") xfill True
+            textbutton "Reading settings" action ShowMenu("renmodpy_settings") xfill True
+            if not main_menu:
+                textbutton "Replay story":
+                    xfill True
+                    action Show("confirm", message="Restart this story? Quick and named saves are kept.",
+                        yes_action=Function(_rm_restart_story, story_label), no_action=Hide("confirm"))
+            if persistent.renmodpy_last_result:
+                frame:
+                    xfill True
+                    text _rm_literal(persistent.renmodpy_last_result)
+            textbutton "Close app" action Quit(confirm=True) xfill True
     key "game_menu" action (Quit(confirm=True) if main_menu else Return())
 
-screen renmodpy_records():
+screen renmodpy_history():
     tag menu
     style_prefix "renmodpy"
-    default draft_title = ""
-    default draft_body = ""
-    default message = ""
-    default title_value = ScreenVariableInputValue("draft_title", default=True)
-    default body_value = ScreenVariableInputValue("draft_body", default=False)
-    $ snapshot, read_error = _rm_record_snapshot()
     add Solid("#101d27")
-    vbox:
+    viewport:
+        id "history_content"
         xpos 36
         ypos 36
         xsize 648
-        spacing 14
-        hbox:
+        ysize 1208
+        draggable True
+        mousewheel True
+        scrollbars "vertical"
+        vbox:
+            xsize 620
             spacing 18
-            text "Records" style "renmodpy_heading"
-            textbutton "Home" action ShowMenu("renmodpy_home")
-        text "Application data stays current when a story is loaded." style "renmodpy_caption"
-        text "Title" style "renmodpy_caption"
-        button:
-            xfill True
-            action title_value.Toggle()
-            input value title_value length 80 xsize 600
-        text "Note" style "renmodpy_caption"
-        button:
-            xfill True
-            action body_value.Toggle()
-            input value body_value length 1000 xsize 600
-        textbutton "Add record":
-            xfill True
-            sensitive not read_error
-            action Function(_rm_add_record, draft_title, draft_body, snapshot["revision"])
-        text _rm_literal(read_error or message) style "renmodpy_caption"
-        viewport:
-            id "records_list"
-            ysize 600
-            xfill True
-            draggable True
-            mousewheel True
-            scrollbars "vertical"
+            hbox:
+                spacing 18
+                text "Story history" style "renmodpy_heading" xmaximum 440
+                textbutton "Home" action ShowMenu("renmodpy_home")
+            for entry in _history_list:
+                frame:
+                    xfill True
+                    vbox:
+                        spacing 10
+                        if entry.who:
+                            text _rm_literal(entry.who) bold True
+                        text renpy.filter_text_tags(entry.what or "", allow={"b", "i", "u", "s", "color"}):
+                            substitute False
+            if not _history_list:
+                text "Dialogue will appear here as you read." style "renmodpy_caption"
+    key "game_menu" action ShowMenu("renmodpy_home")
+
+screen renmodpy_settings():
+    tag menu
+    style_prefix "renmodpy"
+    default message = ""
+    add Solid("#101d27")
+    viewport:
+        id "settings_content"
+        xpos 36
+        ypos 36
+        xsize 648
+        ysize 1208
+        draggable True
+        mousewheel True
+        scrollbars "vertical"
+        vbox:
+            xsize 620
+            spacing 24
+            hbox:
+                spacing 18
+                text "Reading settings" style "renmodpy_heading" xmaximum 440
+                textbutton "Home" action ShowMenu("renmodpy_home")
+            text ("Text size: Larger" if _preferences.font_size > 1.0 else "Text size: Standard"):
+                style "renmodpy_caption"
+            hbox:
+                spacing 12
+                textbutton "Standard" action Function(_rm_reading_preference, "font size", 1.0)
+                textbutton "Larger" action Function(_rm_reading_preference, "font size", 1.25)
+            text "A clear sky, a quiet morning. Your place in the story is kept."
+            text ("Dialogue: Instant" if _preferences.text_cps == 0 else "Dialogue: Animated"):
+                style "renmodpy_caption"
+            hbox:
+                spacing 12
+                textbutton "Animated" action Function(_rm_reading_preference, "text speed", 30)
+                textbutton "Instant" action Function(_rm_reading_preference, "text speed", 0)
+            text "With animated dialogue, tap once to reveal the line, then again to continue.":
+                style "renmodpy_caption"
+            text "These settings stay current when you load an older story save.":
+                style "renmodpy_caption"
+            text _rm_literal(message) style "renmodpy_caption"
+    key "game_menu" action ShowMenu("renmodpy_home")
+
+screen renmodpy_records(collection="records", title="Records", fields=renmodpy.DEFAULT_FIELDS):
+    tag menu
+    style_prefix "renmodpy"
+    default form = renmodpy.RecordDraft(fields)
+    default input_values = {field.name: DictInputValue(form.values, field.name, default=(index == 0)) for index, field in enumerate(form.fields)}
+    $ snapshot, read_error = _rm_record_snapshot(collection)
+    add Solid("#101d27")
+    viewport:
+        id "records_list"
+        xpos 36
+        ypos 36
+        xsize 648
+        ysize 1208
+        draggable True
+        mousewheel True
+        scrollbars "vertical"
+        vbox:
+            xsize 620
+            spacing 14
+            hbox:
+                spacing 18
+                text _rm_literal(title) style "renmodpy_heading" xmaximum 440
+                textbutton "Home" action ShowMenu("renmodpy_home")
+            text "Application data stays current when a story is loaded." style "renmodpy_caption"
+            for field in form.fields:
+                text _rm_literal(field.label) style "renmodpy_caption"
+                button:
+                    xfill True
+                    action input_values[field.name].Toggle()
+                    yminimum (156 if field.multiline else 72)
+                    input:
+                        id ("record_" + field.name)
+                        value input_values[field.name]
+                        length field.max_length
+                        multiline field.multiline
+                        xsize 576
+            hbox:
+                spacing 12
+                textbutton ("Save changes" if form.editing_id else "Add record"):
+                    sensitive not read_error and not form.needs_reload
+                    action Function(_rm_submit_record, form, collection, snapshot["revision"])
+                textbutton "Cancel edit":
+                    sensitive form.editing_id is not None or any(form.values.values())
+                    action Function(form.cancel)
+            text _rm_literal(read_error or form.message) style "renmodpy_caption"
+            textbutton "Reload records" action Function(_rm_reload_records, form, collection)
+            null height 10
             vbox:
                 xsize 620
                 spacing 16
@@ -189,15 +330,21 @@ screen renmodpy_records():
                         xsize 620
                         vbox:
                             spacing 10
-                            text _rm_literal(record["values"].get("title", "Record")):
-                                bold True
-                            text _rm_literal(record["values"].get("body", "")):
-                                size 24
-                            textbutton "Delete":
-                                action Show("confirm",
-                                    message="Delete this record?",
-                                    yes_action=Function(_rm_delete_record, record["id"], snapshot["revision"]),
-                                    no_action=Hide("confirm"))
+                            for field in form.fields:
+                                text _rm_literal(record["values"].get(field.name, "")):
+                                    size (28 if field == form.fields[0] else 24)
+                                    bold field == form.fields[0]
+                            hbox:
+                                spacing 12
+                                textbutton "Edit":
+                                    sensitive not read_error and not form.needs_reload
+                                    action Function(_rm_edit_record, form, snapshot, record["id"])
+                                textbutton "Delete":
+                                    sensitive not read_error and not form.needs_reload
+                                    action Show("confirm",
+                                        message="Delete this record?",
+                                        yes_action=Function(_rm_delete_record, record["id"], snapshot["revision"], form, collection),
+                                        no_action=Hide("confirm"))
                 if not snapshot["records"] and not read_error:
                     text "Your saved records will appear here." style "renmodpy_caption"
     key "game_menu" action ShowMenu("renmodpy_home")
@@ -302,6 +449,10 @@ screen renmodpy_tactics(session):
             textbutton "Skip" action [Function(board.skip), Return("skipped")]
             textbutton "Home" action [Function(_rm_return_home), ShowMenu("renmodpy_home")]
     key "game_menu" action [Function(_rm_return_home), ShowMenu("renmodpy_home")]
+
+label renmodpy_restart:
+    $ _rm_services.begin_story()
+    jump expression _restart[2]
 
 label renmodpy_tactics:
     $ _renmodpy_board = renmodpy.BoardSession()
