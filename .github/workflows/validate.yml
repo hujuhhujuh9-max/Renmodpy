@@ -70,11 +70,14 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+      - uses: android-actions/setup-android@035682743ab223ec9c6169af09811dff8247e520
+        with:
+          packages: platform-tools platforms;android-36 build-tools;36.0.0
+          log-accepted-android-sdk-licenses: false
       - name: Install Android build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y git-lfs patch libegl1 libgl1-mesa-dri libsdl2-2.0-0
-          sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
           sudo chmod 666 /dev/kvm
       - name: Assemble the engine and build the validation APK
         run: |
