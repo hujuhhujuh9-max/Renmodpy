@@ -13,6 +13,10 @@ screen main_menu():
     tag menu
     use renmodpy_home()
 
+label main_menu:
+    call screen main_menu
+    return
+
 screen confirm(message, yes_action, no_action):
     modal True
     zorder 200

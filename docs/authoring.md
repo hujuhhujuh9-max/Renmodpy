@@ -19,6 +19,10 @@ screen main_menu():
     tag menu
     use renmodpy_home(story_label="start")
 
+label main_menu:
+    call screen main_menu
+    return
+
 label start:
     $ app.begin_story()
     $ renmodpy_scene = "The lighthouse"
