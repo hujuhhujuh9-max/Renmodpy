@@ -14,8 +14,8 @@ STATE = f"/data/user/0/{PACKAGE}/files/renmodpy-probe/state.json"
 ACTIVITY = PACKAGE + "/org.renpy.android.PythonSDLActivity"
 
 
-def adb(*arguments, check=True):
-    return subprocess.run(["adb", *arguments], capture_output=True, check=check, timeout=45)
+def adb(*arguments, check=True, timeout=45):
+    return subprocess.run(["adb", *arguments], capture_output=True, check=check, timeout=timeout)
 
 
 def run(apk, output):
@@ -32,7 +32,8 @@ def run(apk, output):
                 latest = json.loads(result.stdout)
             except ValueError:
                 pass
-        return latest
+            return latest
+        return {}
 
     def wait(predicate, message, timeout=60):
         deadline = time.monotonic() + timeout
@@ -73,8 +74,24 @@ def run(apk, output):
         screen("renmodpy_home")
 
     try:
+        adb("wait-for-device", timeout=180)
+        deadline = time.monotonic() + 180
+        while adb("shell", "getprop", "sys.boot_completed", check=False).stdout.strip() != b"1":
+            if time.monotonic() >= deadline:
+                raise RuntimeError("Android emulator did not finish booting.")
+            time.sleep(1)
+        if adb("shell", "getprop", "ro.kernel.qemu").stdout.strip() != b"1":
+            raise RuntimeError("Use a disposable emulator; this check clears the example's app data.")
         adb("root")
         adb("wait-for-device")
+        if adb("shell", "id", "-u").stdout.strip() != b"0":
+            raise RuntimeError("The validation observer requires a rooted emulator.")
+        for namespace, name in (("global", "device_provisioned"), ("secure", "user_setup_complete"),
+                                ("secure", "show_ime_with_hard_keyboard")):
+            adb("shell", "settings", "put", namespace, name, "1")
+        adb("shell", "settings", "put", "secure", "immersive_mode_confirmations", "confirmed")
+        adb("shell", "input", "keyevent", "224")
+        adb("shell", "wm", "dismiss-keyguard")
         adb("shell", "wm", "size", "720x1280")
         adb("shell", "wm", "density", "160")
         adb("logcat", "-c")

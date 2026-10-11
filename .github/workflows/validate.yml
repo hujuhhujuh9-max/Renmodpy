@@ -2,7 +2,7 @@ name: Validate RenModPy
 
 on:
   push:
-    branches: [main, 'bootstrap/**']
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -61,6 +61,9 @@ jobs:
     name: Android APK and emulator checks
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    env:
+      ANDROID_USER_HOME: ${{ github.workspace }}/.renmodpy-build/android-user
+      ANDROID_AVD_HOME: ${{ github.workspace }}/.renmodpy-build/android-user/avd
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
@@ -78,20 +81,26 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y git-lfs patch libegl1 libgl1-mesa-dri libsdl2-2.0-0
-          sudo chmod 666 /dev/kvm
+          test -e /dev/kvm
+          sudo chown "$USER" /dev/kvm
       - name: Assemble the engine and build the validation APK
         run: |
           python3 build_sdk.py
           python3 scripts/build_android_check.py --sdk .renmodpy-build/renmodpy-sdk
+      - name: Prepare the Android 15 emulator
+        run: |
+          sdk_tools_bin="$ANDROID_HOME/cmdline-tools/latest/bin"
+          test -x "$sdk_tools_bin/sdkmanager"
+          "$sdk_tools_bin/sdkmanager" "emulator" "system-images;android-35;google_apis;x86_64"
+          mkdir -p "$ANDROID_AVD_HOME" .renmodpy-build/android-check
+          "$sdk_tools_bin/avdmanager" create avd --force --name renmodpy --device pixel_2 --path "$ANDROID_AVD_HOME/renmodpy.avd" --package "system-images;android-35;google_apis;x86_64"
       - name: Install and exercise the APK on Android
-        uses: ReactiveCircus/android-emulator-runner@ed009f5318f15b1cf93a191b856c4f1748a2d4c1
-        with:
-          api-level: 35
-          arch: x86_64
-          target: google_apis
-          profile: Nexus 5
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
-          script: python3 scripts/check_android.py
+        run: |
+          adb start-server
+          "$ANDROID_HOME/emulator/emulator" -avd renmodpy -skin 720x1280 -no-window -no-audio -no-boot-anim -no-snapshot -no-metrics -gpu swiftshader -memory 2048 -camera-back none -camera-front none -feature -Vulkan > .renmodpy-build/android-check/emulator.log 2>&1 &
+          emulator_pid=$!
+          trap 'adb emu kill >/dev/null 2>&1 || true; kill "$emulator_pid" 2>/dev/null || true' EXIT
+          python3 scripts/check_android.py
       - name: Upload Android emulator evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7

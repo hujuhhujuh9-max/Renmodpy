@@ -16,6 +16,7 @@ Donor main commit: `0fc79f001b2177a9a31dea31fd781b4cc298a510`.
 | `engine/python/renmodpy/android_jni*.py` | `runtime/android_jni*.py` | JNI helpers retained; executor import made relative |
 | `prepare.py` | `prepare.py` | Preparation restricted to Ren'Py and RAPT |
 | `tests/test_tactics.py` | `tests/test_tactics.py` | Terrain/camera regression cases retained |
+| `.github/workflows/validate.yml`, `scripts/check_android.py` emulator setup | `.github/workflows/check-project-update.yml` at `0fc79f001b2177a9a31dea31fd781b4cc298a510` | Direct SDK/AVD startup and first-use setup adapted to the native validation APK; no emulator action runtime |
 
 Native history, reading settings, quick save/load and replay reproduce the
 donor's `runtime/story_ui.py` behavior using Ren'Py's own history, preferences,
