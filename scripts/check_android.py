@@ -356,6 +356,7 @@ def run(apk, output, upgrade_apk=None):
         adb("install", "-r", str(apk))
         adb("install", "-r", str(ROOT / ".renmodpy-build/android-fixtures/fixtures.apk"))
         adb("shell", "pm", "clear", PACKAGE)
+        adb("shell", "pm", "clear", FIXTURE_PACKAGE)
         adb("shell", "am", "start", "-W", "-n", ACTIVITY)
         initial = screen("main_menu")
         assert initial["android"], "The APK did not run the Android runtime"

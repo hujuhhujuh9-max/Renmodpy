@@ -45,3 +45,15 @@
  
    {% if (config.store in ("play", "all" )) %}
    <uses-permission android:name="com.android.vending.BILLING"/>
+--- a/templates/renpyandroid-AndroidManifest.xml
++++ b/templates/renpyandroid-AndroidManifest.xml
+@@ -3,3 +3,2 @@
+     <uses-permission android:name="android.permission.WAKE_LOCK" />
+     <uses-permission android:name="android.permission.VIBRATE" />
+-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+--- a/prototype/renpyandroid/src/main/AndroidManifest.xml
++++ b/prototype/renpyandroid/src/main/AndroidManifest.xml
+@@ -11,3 +11,2 @@
+     <uses-permission android:name="android.permission.WAKE_LOCK" />
+     <uses-permission android:name="android.permission.VIBRATE" />
+-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />

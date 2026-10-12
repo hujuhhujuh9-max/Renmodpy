@@ -6,8 +6,8 @@ init 900 python:
     config.label_overrides["start"] = "renmodpy_check_media"
 
 label renmodpy_check_media:
+    show screen renmodpy_home
     show screen renmodpy_example_media
-    $ renpy.music.play("media/tone.wav", channel="example_tone", loop=True)
     $ _rm_media_positions = []
     $ _rm_media_output = _rm_media_Path(_rm_media_os.environ["RENMODPY_CHECK_OUTPUT"])
     $ renpy.pause(0.5, hard=True)
@@ -20,8 +20,7 @@ label renmodpy_check_media:
             assert renpy.screenshot(str(_rm_media_output / ("media-%d.png" % index)))
         assert all(position is not None for position in _rm_media_positions)
         assert len(set(round(position, 2) for position in _rm_media_positions)) > 1
-    hide screen renmodpy_example_media
-    $ renpy.music.stop(channel="example_tone")
+    show screen renmodpy_home
     $ renpy.pause(0.3, hard=True)
     python:
         assert renpy.music.get_playing("example_tone") is None
