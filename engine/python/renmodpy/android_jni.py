@@ -75,7 +75,8 @@ def run_on_ui_thread(handler, *, on_error=None):
         finally:
             _ui_calls.discard(call)
 
-    call = _JavaCall(handler, on_finish=finished)
+    # Pyjnius's native __cinit__(*args) runs before our Python __init__.
+    call = _JavaCall(handler, finished)
     _ui_calls.add(call)
     try:
         activity = autoclass("org.renpy.android.PythonSDLActivity").mActivity

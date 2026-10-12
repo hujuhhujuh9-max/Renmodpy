@@ -25,6 +25,12 @@ class AndroidUiTests(unittest.TestCase):
                 return local.thread
 
         class JavaClass:
+            def __new__(cls, *args, **kwargs):
+                # Pyjnius's Cython __cinit__(*args) receives constructor
+                # arguments before the Python subclass __init__ can bind them.
+                if kwargs:
+                    raise TypeError("Native __cinit__ does not accept keyword arguments")
+                return super().__new__(cls)
             def __init__(self):
                 self.j_self = self
 
