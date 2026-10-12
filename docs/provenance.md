@@ -97,6 +97,9 @@ authenticated storage; Ren'Py remains the sole Python/runtime owner.
 `engine/android/patches/document-results.patch` publishes activity results in
 order, permits scoped cache attachments and removes the unused broad external
 storage permission. It applies after the locked donor null-result patch.
+`engine/android/patches/display-density.patch` declares SDL's handling of density
+changes. Without it Android destroys the activity and its live interpreter when
+display density changes; the emulator exposed this during the tall profile check.
 Offline receiver, document-provider and composing-keyboard sources under
 `scripts/fixtures` are original disposable test code and are excluded from the
 engine and ordinary application projects.

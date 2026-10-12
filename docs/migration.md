@@ -19,11 +19,11 @@ as a custom-state save test. It is not the main product direction.
 | Record edit/cancel/reload, multiline/custom fields and collections | Built-in reusable form and draft recovery |
 | Clipboard copy/read and Unicode form paste | Native SDL services, Records and history actions; Android acceptance passes |
 | Android text sharing | Native text chooser through the engine API, Records and history actions; exact Unicode/multiline payload and draft-preserving return pass on Android |
-| Android JNI class-loader helpers | Imported worker helper plus retained UI-thread sharing callbacks; phone/worker coverage pending |
+| Android JNI class-loader helpers | Imported app-loader worker helper and retained UI-thread callbacks; Android private-service workers and owner callbacks pass, physical phones pending |
 | Flutter/Flet controls and transport | Not included |
 | WebView | Out of scope |
 | Rive/Lottie animations | Optional; a concrete use case is needed |
-| Secure storage and picker | New native Keystore/scoped-document APIs and Records backups; Android validation in progress |
+| Secure storage and picker | Keystore tamper/lifecycle/upgrade/delete and scoped backup/attachment acceptance pass on Android |
 | Rich code editor and advanced tables | Optional feature-specific work |
 
 The example uses native Ren'Py menu contexts to retain live story progress.
@@ -55,10 +55,17 @@ pending-recovery cleanup and SDL suspension running after renderer resize.
 The acceptance receipt and source
 identity are recorded in [Codex handoff](codex-handoff.md).
 
-Physical-device/ARM, Unicode IME composition, rotation/deep links and wider lifecycle profiles,
-board touch/rendering, file picking/attachment sharing, receiving-app delivery,
-other Android services and AAB/update acceptance remain
-pending. Import checks and Linux probes do not establish these device results.
+Actual composing Unicode input, native media output, custom collection isolation,
+private-storage round trips and UI-thread haptic requests now pass on the Android
+emulator. Fresh projects build signed base/update APKs and a clean-project AAB
+with the same disposable key. Scoped document/attachment, installed same-key
+upgrade and compact/tall/default
+size/density acceptance now pass. The same interpreter retains the live draft,
+and the app keeps its declared portrait orientation. The
+[latest receipt](android-services-acceptance.json) preserves the evidence.
+Physical-device/ARM runtime checks, audible
+playback, felt haptics, additional IMEs, deep links and board touch remain
+unverified. Import checks and Linux probes do not establish these device results.
 
 See [feature parity](feature-parity.md) for the RenFletPy benchmark, current
 evidence and remaining gaps, and [authoring](authoring.md) for one app/story

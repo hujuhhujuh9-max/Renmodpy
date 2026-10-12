@@ -21,38 +21,39 @@ and [capability assessment](https://github.com/hujuhhujuh9-max/SDK-/blob/0fc79f0
 | Chronological story history | Android native history screen and saved chronology checked |
 | Standard/larger text and animated/instant dialogue | Android larger/instant settings survive cold restart, older-save load and replay; headings remain readable |
 | Replay | Android restart clears story/history/choice state; Records, preferences, quick and named saves remain |
-| Record add/edit/cancel/delete/reload | Android keyboard entry/add/cold persistence pass; native host probes exercise editing/draft recovery, and Python tests cover stale/failed writes |
-| Custom fields and independent collections | `FormField`, `RecordDraft` and named private JSON collections; Python tests and native multiline input probe |
+| Record add/edit/cancel/delete/reload | Android add/edit/cancel/delete and saved/A–Z ordering pass; native probes and Python tests cover draft recovery, stale edits and failed writes |
+| Custom fields and independent collections | `FormField`, `RecordDraft` and named private JSON collections; custom Android entry and collection isolation pass, alongside Python/native checks |
 | Custom screens and activities | Ordinary Ren'Py screens, labels, Python and displayables; tactics demonstrates versioned custom save state |
 | Clipboard copy/read and native form paste | Android history/record copy and Unicode/multiline Note paste pass; rejected Title paste keeps the draft; clipboard and pasted Records remain current after old-save load/replay |
 | Plain-text sharing | Real Android choosers receive exact Unicode/multiline history and saved Records on the UI thread; Back keeps the draft/story/settings/saves and leaves input inactive; receiving-app delivery is unverified |
-| Audio, video and ATL animation | Example Media room and native output fixtures pass playback, decoded-color and visible-motion checks; Android acceptance in progress |
-| JSON editor, sortable tables, color controls, cancellable async loaders and charts | Reusable native equivalents still need implementation and representative interaction/output checks |
-| File picker/attachment sharing, secure storage and haptics | Scoped backup import/export and granted attachments, Keystore AES-GCM and native haptic APIs implemented; full Android interaction validation in progress |
-| Deep links and lifecycle/device coverage | Android live Records draft/app switch, background process kill and cold Home recovery pass alongside force-stop/relaunch; deep links, rotation and wider device/lifecycle profiles remain pending |
-| Project creation, release packaging and update acceptance | Fresh projects compile/lint/package; signed disposable APK/update APK and clean-project AAB builds pass; installed update acceptance in progress; owner-key signing and physical-device checks remain |
+| Audio, video and ATL animation | Native Media room passes playback progression, decoded red/blue video frames, visible ATL motion and stop on menu replacement in both host renderers and Android; physical audibility unverified |
+| Records ordering and richer app controls | Saved/A–Z Records ordering passes real Android interaction without changing stored rows or drafts. JSON editors, richer tables, color controls, cancellable loaders and charts need concrete use cases |
+| File picker/attachment sharing, secure storage and haptics | Scoped import/export, cancellation, malformed backups and reviewed merges pass on Android; another UID reads the granted attachment. Keystore tamper/restart/old-load/replay/upgrade/delete and UI-thread haptics pass; physical feedback unverified |
+| Deep links and lifecycle/device coverage | Android app switching, process kills and cold Home recovery pass; compact/tall/default sizes and densities keep the live draft and input in one interpreter, and a landscape request respects portrait orientation. Deep links and physical devices remain unverified |
+| Project creation, release packaging and update acceptance | Fresh projects compile/lint/package; signed base/update APKs and a clean AAB pass. Installed same-key updates preserve Records, preferences, saves, story Resume and encrypted text; owner-key signing and physical devices remain |
 | Rive/Lottie | Optional native integration when a concrete use case requires these formats |
 | WebView | Out of scope by product choice |
 | Phone camera, GPS and audio recording | Remain disabled |
 
-The [verified run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38218211725)
-passes 61 Python tests, 27 checks with each real host renderer and eleven Android
-emulator acceptance checks. The Android profile is API 35 x86_64 at 720×1280/160 dpi,
-using an APK targeting API 36. It verifies the native app/story controls above,
-including Unicode/multiline clipboard input, native text sharing with exact
-Intent/Android UI-thread checks, live app switching, two force-stop
-restarts and two background process kills. Native recovery preserves the latest
-waiting choice/dialogue, and app switching from cold Home keeps its pending
-checkpoint. File picking/attachments, receiving-app delivery, broader JNI
-service operations, Unicode IME composition, board
-touch, media output, physical-device performance and wider lifecycle/device
-coverage remain unverified. See
-[Codex handoff](codex-handoff.md) and the committed
-[sharing acceptance receipt](android-sharing-acceptance.json). The earlier
+The [verified run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38311573307) passes 81 Python tests,
+33 checks with each real host renderer and 22 Android acceptance groups.
+The APK targets API 36 and runs on Android 15/API 35 x86_64. Input coverage
+includes a native composing InputConnection committing `café` and actual
+custom form/Records interactions. Media evidence includes native playback
+progression, six decoded video frames and visible ATL motion. Profiles cover
+480×800/160 dpi, 1080×2400/320 dpi and 720×1280/160 dpi, with live state and
+input retained; portrait orientation remains enforced after a landscape request.
+
+The [services/media/packaging receipt](android-services-acceptance.json)
+records all checks, source inputs, artifact hashes and expiry dates.
+See [Codex handoff](codex-handoff.md) for current results. The earlier
+[sharing](android-sharing-acceptance.json),
 [lifecycle](android-lifecycle-acceptance.json),
 [clipboard](android-clipboard-acceptance.json) and
-[foundation](android-acceptance.json) receipts are retained. Full RenFletPy parity has not yet
-been established.
+[foundation](android-acceptance.json) receipts are retained unchanged.
+Physical-device/ARM performance, hardware-backed Keystore behavior, audible
+playback, felt haptics, other IMEs, deep links and board touch remain unverified.
+Full RenFletPy parity has not yet been established.
 
 Every follow-up feature should include its native implementation, integration
 with the existing app/story session and the relevant save/lifecycle checks.

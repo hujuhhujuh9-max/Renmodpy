@@ -70,6 +70,7 @@ With that toolchain installed and `ANDROID_HOME` set:
 ```bash
 python3 build_sdk.py --output .renmodpy-build/android-sdk
 python3 scripts/build_android_check.py --sdk .renmodpy-build/android-sdk
+python3 scripts/build_android_fixtures.py
 # Start a disposable rooted Android emulator before this command:
 python3 scripts/check_android.py
 ```
@@ -100,9 +101,10 @@ the new processes; a paused observer is never used to drive recovery.
 Successful runs write `.renmodpy-build/android-check/passed.json`. Screenshots,
 last observed state, logcat and the emulator log are uploaded in the
 `android-emulator-check` artifact, alongside the APK build log and checksum
-receipt. A green Android job also uploads `android-validation-apk` with the
-disposable APK and build receipt. These are validation artifacts, not an
-application release. A failed or interrupted run must not retain `passed.json`.
+receipt. The Android job also uploads `android-validation-apk` with the
+signed base/update APKs, clean-project AAB and build receipt, including when
+an interaction check fails after successful packaging. These are validation
+artifacts, not an application release. A failed or interrupted run must not retain `passed.json`.
 
 The native check separately tests ordinary main-menu startup followed by cold
 Home Resume/Quick load on the first dialogue. The local engine patch prevents
@@ -168,8 +170,12 @@ in `rapt/sdk.txt`, then build through the same native launcher:
 
 Increment `version` and `numeric_version` in `.android.json` for an update and
 keep `config.version` consistent. RAPT also ensures its numeric version is at
-least the build timestamp. Verify APK signatures with `apksigner verify
---print-certs` and AAB signatures with `jarsigner -verify`; then exercise an APK
+least the build timestamp. Retain the previous release's `.rpyc` files alongside
+the source, or copy them into an `old-game` directory beside `game`, before
+recompiling an update. Ren'Py uses them to match statement identities so older
+story saves can find their original position. Back them up with each release,
+including when Git ignores compiled files. Verify APK signatures with
+`apksigner verify --print-certs` and AAB signatures with `jarsigner -verify`; then exercise an APK
 update using `adb install -r` without clearing data. Creating these artifacts
 does not publish an app or upload anything to a store.
 
@@ -189,8 +195,12 @@ has no network permission. The keyboard commits composed Unicode through the
 actual native input connection. Private-storage checks inspect encryption,
 reject tampering and verify persistence across loads/restarts/upgrades. Media
 checks compare decoded video colors and ATL positions in screenshots and
-observe native playback progression. Headless playback does not establish
-audibility or felt haptics.
+observe native playback progression. The completed emulator run passes all 22
+acceptance groups, including live
+480×800/160 dpi, 1080×2400/320 dpi and 720×1280/160 dpi profiles and declared
+portrait orientation. Density is handled by the SDL activity, preserving its
+interpreter and draft. See [acceptance evidence](android-services-acceptance.json).
+Headless playback does not establish audibility or felt haptics.
 
 The native screen probe also evaluates the Android-only Records Share button
 using a screen-local platform flag. It runs the actual input-dismissal action

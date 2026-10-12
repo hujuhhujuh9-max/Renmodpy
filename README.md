@@ -121,31 +121,27 @@ RenFletPy is the behavioral benchmark. See [feature parity](docs/feature-parity.
 for implemented features and remaining Android-service/control gaps, and
 [authoring](docs/authoring.md) for an integrated app/story project.
 
-The [Android validation run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38218211725)
-passes on Android 15/API 35 x86_64: real input, cold Resume, older Quick load,
-named save/overwrite/load/delete and replay preserve the continuous app/story
-session and current Records/settings. Native history/record copy and Unicode
-clipboard paste also pass, including rejecting invalid field input without
-losing a draft. App switching preserves the live Records draft, and background
-process recovery restores the latest waiting choice or dialogue. Switching
-away from cold Home before Resume keeps its pending recovery checkpoint.
-Share line and Share record open the real Android text chooser with exact
-Unicode/multiline payloads. Back returns to the same menu and waiting story,
-keeping an unsaved Records draft and leaving its keyboard closed. Sharing runs
-on Android's UI thread without blocking SDL or submitting the draft.
-Engine patches fix the first-dialogue save boundary, cold Home cleanup and a
-crash when switching apps with the keyboard open by handling SDL suspension
-before rendering.
-All 61 Python tests, 27 checks with each native renderer and 11 Android
-acceptance checks pass. The [Codex handoff](docs/codex-handoff.md)
-links the receipts, screenshots and disposable validation APK.
+The [verified CI run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38311573307) passes 81 Python tests,
+33 checks with each real native renderer and 22 Android acceptance groups on
+Android 15/API 35 x86_64. Android tests exercise real composing Unicode input,
+custom Records, clipboard/text choosers, scoped backup import/export, attachment
+reads by another UID, private-storage tamper/restart/load/replay/delete,
+native media output and a signed same-key installed upgrade. Records, current
+settings, saves, story Resume and the encrypted entry survive the update.
 
-Physical-device/ARM, file picking/attachment sharing, receiving-app delivery,
-rotation/deep links, other Android services, AAB and update
-acceptance remain pending. Full RenFletPy parity is still work ahead.
-Rive/Lottie and richer controls are
-optional additions when a concrete use case needs them. WebView is out of
-scope. See the
+The compact 480×800/160 dpi, tall 1080×2400/320 dpi and default 720×1280/160 dpi
+profiles retain the live draft and tappable inputs in the same interpreter;
+a landscape request respects the declared portrait orientation. Signed
+base/update APKs and a clean-project AAB pass signature, version, permission,
+ARM64/x86_64 packaging and downloaded-byte checks. The
+[acceptance receipt](docs/android-services-acceptance.json) preserves source and
+artifact hashes; the [Codex handoff](docs/codex-handoff.md) links the evidence.
+
+Physical-device/ARM runtime checks, hardware-backed Keystore behavior, audible
+playback, felt haptics, additional IMEs and deep links remain unverified.
+Release signing requires the owner's retained key. Full RenFletPy parity is
+still work ahead. Rive/Lottie and richer controls are optional additions when
+a concrete use case needs them. WebView is out of scope. See the
 [migration status](docs/migration.md) and [source provenance](docs/provenance.md).
 
 The project retains the donor's ownership terms in [LICENSE](LICENSE).

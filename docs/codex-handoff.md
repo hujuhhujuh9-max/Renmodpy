@@ -1,17 +1,66 @@
 # Codex handoff
 
-## Active completion work, 2026-10-12
+## Completed continuation milestone, 2026-10-12
 
-The user authorized the remaining Android coverage, useful SDK services,
-media fixtures and fresh-project/packaging work (prompt 24). Scoped backup
-import/export, attachment sharing, AES-GCM Android Keystore storage and native
-haptic APIs are implemented on the review branch. Local validation passes
-79 host tests and 28 native engine checks, including confirmed backup imports
-that preserve drafts and hidden fields. Android acceptance for these additions
-is pending; the receipts below describe the earlier verified milestone.
-The emulator fixture now has an offline document provider, a receiver with a
-separate UID and an actual composing IME. None is part of the engine/product.
-Media, wider screen profiles and packaging/upgrade validation remain active.
+The remaining completion work authorized in prompt 24 is implemented and
+verified on the emulator. RenModPy carries these additions inside one modified
+Ren'Py/SDL engine: scoped Records backup import/export and reviewed atomic merge,
+content-URI attachment sharing, Android Keystore AES-GCM private text, native
+haptics, saved/A–Z Records ordering, a native audio/video/ATL Media room and SDK
+project creation with independent Android/save/build identity.
+
+- Verified code/test revision: `64edd698b80f34038700ce342420ea4730ff938f`.
+- [Green CI run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38311573307):
+  81 host tests, 33 checks in each real native renderer and 22 Android acceptance groups.
+- [Committed acceptance receipt](android-services-acceptance.json): exact source
+  inputs, checks, signing metadata, binary/archive hashes, artifact links and expiry.
+- [Android evidence](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38311573307/artifacts/11775113203):
+  screenshots, composing-IME receipt, decoded media frames, private-storage checks,
+  document/receiver receipts, activity dumps and emulator/logcat output.
+- [Signed validation artifacts](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38311573307/artifacts/11775397724):
+  base APK, higher-version same-key APK and signed clean-project AAB. Downloaded
+  bytes match the build receipt; private keys and test observers in the clean AAB
+  are absent. These are disposable validation artifacts, not an app release.
+- [Native evidence](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38311573307/artifacts/11774464380):
+  both renderer receipts, fresh-process saves/restarts, media frames and SDK inventory.
+
+Android acceptance runs on Android 15/API 35 x86_64 with an APK targeting API 36.
+A real InputConnection composes/commits `café`. Custom collection forms, actual
+Records add/edit/cancel/delete/sorting, clipboard/text choosers, scoped backup
+cancel/export/import, malformed JSON rejection and confirmed merges pass while
+keeping the draft. Another UID reads the granted attachment offline. Private
+storage passes authenticated tamper rejection, cold restart, older-save loading,
+replay, same-key upgrade and explicit delete/missing. Worker JNI uses the app
+loader; callbacks run on the Ren'Py owner and haptics on Android's UI thread.
+
+Native audio playback progresses, video decodes red/blue frames and ATL motion
+is visible; stop/restart/menu replacement control the channels. The signed
+installed upgrade preserves Records, custom collections, reading settings,
+quick saves, story Resume and the exact encrypted entry. Signed APK/AAB metadata,
+permissions, ARM64/x86_64 packaging and clean-project identity are verified.
+
+Compact 480×800/160 dpi, tall 1080×2400/320 dpi and default 720×1280/160 dpi
+profiles preserve the live draft, saved data and settings in the same interpreter,
+with tappable inputs. A landscape request respects the declared portrait app.
+The density manifest patch prevents Android from destroying the SDL activity.
+
+The emulator also exposed a screen-local sorting lambda and cold first-dialogue
+restoration after Replay. Sorting now binds its field explicitly. Replay captures
+its target as plain story data before the save boundary; three fresh-process
+regressions cover Resume/Quick load with a custom story label. Update builds
+retain previous compiled statement identities. The harness measures the real
+panned SDL view, settles native windows and avoids relaunching an already resumed
+sender after sharing. Its screenshot check requires a visibly redrawn Records UI.
+
+The offline document provider, receiver and composing IME belong only to the
+validation APKs. Production projects remain ordinary Ren'Py projects. Work stays
+on `bootstrap/native-foundation` in [draft PR #1](https://github.com/hujuhhujuh9-max/Renmodpy/pull/1).
+No merge or application publishing has been requested. All four earlier receipts
+below are retained unchanged. Physical ARM devices, hardware-backed Keystore
+behavior, felt haptics, audible playback, other IMEs, deep links, board touch and
+optional richer controls remain unverified. Full RenFletPy parity is not claimed.
+
+## Earlier foundation and sharing milestone
 
 RenModPy's native app/story foundation and text sharing pass Android emulator acceptance.
 Read [vision.md](vision.md), [user-prompts.md](user-prompts.md) and `AGENTS.md`
@@ -28,7 +77,7 @@ Apply later user corrections when interpreting voice-transcription errors.
 - Repository: `hujuhhujuh9-max/Renmodpy`.
 - Review branch: `bootstrap/native-foundation`.
 - Draft review: [PR #1](https://github.com/hujuhhujuh9-max/Renmodpy/pull/1).
-- Verified engine/test revision: `9b83d78054685c30cf017c613c9b37cdc2578a4a`.
+- Earlier verified engine/test revision: `9b83d78054685c30cf017c613c9b37cdc2578a4a`.
 - Donor benchmark: SDK- `0fc79f001b2177a9a31dea31fd781b4cc298a510`.
 - Locked Ren'Py component: `0d58d1fc5b5fed87cb0f54eb717233d05643f506`.
 - Ren'Py/RAPT archives, checksums and notices remain pinned in `sdk-lock.json`.
@@ -272,13 +321,14 @@ same deletion checks; no speculative filesystem change was made.
 
 ## Continue from this foundation
 
-Use [feature-parity.md](feature-parity.md) for capability gaps. Physical-device
-and ARM acceptance, Unicode IME composition, rotation/deep links and wider lifecycle profiles,
-board touch/camera acceptance, file picking/attachment sharing, receiving-app
-delivery, other Android service operations, AAB packaging and
-same-key updates remain unverified. Audio/video/ATL and richer app controls
-still need representative native fixtures or implementation. The x86_64
-emulator pass establishes the eleven checks above, not full RenFletPy parity.
+Use the completed milestone at the top and [feature-parity.md](feature-parity.md).
+The emulator completion scope is finished; preserve all five receipts and their
+source identities. Continue with physical ARM-device input, hardware-backed
+Keystore, felt haptics and audible media in the owner's environment, then other
+IMEs, deep links, board touch or richer controls when a concrete use case calls
+for them. Production releases require the owner's retained signing key and
+previous compiled scripts for save compatibility. Full RenFletPy parity is not
+established by one emulator and three display profiles.
 
 Keep Ren'Py/SDL as the startup/rendering/story/Python owner. Added functionality
 belongs in the engine's Python API, common screens or native Android support.
