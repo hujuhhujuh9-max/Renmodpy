@@ -52,20 +52,33 @@ def run(apk, output):
     def capture(name):
         (output / (name + ".png")).write_bytes(adb("exec-out", "screencap", "-p").stdout)
 
-    def tap_point(x, y, current):
+    def physical_point(x, y, current):
         physical_width, physical_height = current["physical_size"]
         virtual_width, virtual_height = current["virtual_size"]
         scale = min(physical_width / virtual_width, physical_height / virtual_height)
         x = (physical_width - virtual_width * scale) / 2 + x * scale
         y = (physical_height - virtual_height * scale) / 2 + y * scale
-        adb("shell", "input", "tap", str(round(x)), str(round(y)))
+        return str(round(x)), str(round(y))
+
+    def tap_point(x, y, current):
+        adb("shell", "input", "tap", *physical_point(x, y, current))
         wait(lambda s: s["boot"] != current["boot"] or s["sequence"] > current["sequence"],
              "Android observer did not update after the tap")
 
-    def tap(name):
-        current = wait(lambda s: any(b["name"] == name for b in s["buttons"]),
-                       "No tappable control: " + name)
-        button = next(b for b in current["buttons"] if b["name"] == name)
+    def tap(name, *, occurrence=0, scroll=None):
+        def matches(current):
+            return [button for button in current.get("buttons", []) if button["name"] == name]
+        if scroll:
+            for _ in range(5):
+                current = state()
+                if len(matches(current)) > occurrence:
+                    break
+                start, end = (1000, 300) if scroll == "down" else (300, 1000)
+                adb("shell", "input", "swipe", *physical_point(660, start, current),
+                    *physical_point(660, end, current), "400")
+                wait(lambda s: s["sequence"] > current["sequence"], "Scroll observer did not update")
+        current = wait(lambda s: len(matches(s)) > occurrence, "No tappable control: " + name)
+        button = matches(current)[occurrence]
         x, y, width, height = button["rect"]
         tap_point(x + width / 2, y + height / 2, current)
 
@@ -77,7 +90,7 @@ def run(apk, output):
         wait(lambda s: s.get("input_text") == text, "Android text input did not reach the form")
 
     def home():
-        tap("Home")
+        tap("Home", scroll="up")
         screen("renmodpy_home")
 
     def choose(caption):
@@ -135,19 +148,30 @@ def run(apk, output):
         tap("Story history")
         history = screen("renmodpy_history")
         assert history["history"] == original_history
+        tap("Copy line")
+        wait(lambda s: s.get("clipboard") == original_history[-1], "History copy did not reach the platform clipboard")
         capture("history")
         home()
         tap("Records")
         screen("renmodpy_records")
         enter("title", "Emulator note")
-        enter("body", "Created after the quick save")
+        tap("Paste", occurrence=0)
+        rejected = wait(lambda s: "single line" in s.get("form_message", ""), "Multiline title paste was not rejected")
+        assert rejected["draft"] == {"title": "Emulator note", "body": ""}
+        tap("Paste", occurrence=1)
+        pasted = wait(lambda s: s.get("draft", {}).get("body") == original_history[-1],
+                      "Unicode/multiline clipboard paste did not reach the record draft")
+        assert "Blåbær" in pasted["draft"]["body"] and "\n" in pasted["draft"]["body"]
+        assert pasted["records"] == []
         capture("record-input")
-        # Deselect the native input to close the IME before tapping form actions.
-        tap("field:body")
-        wait(lambda s: s.get("editable_field") is None, "Input stayed active")
         tap("Add record")
-        wait(lambda s: len(s["records"]) == 1, "Record was not saved")
+        saved_record = wait(lambda s: len(s["records"]) == 1, "Record was not saved")["records"][0]
+        assert saved_record["values"] == {"title": "Emulator note", "body": original_history[-1]}
+        tap("Copy record", scroll="down")
+        copied_record = "Emulator note\n\n" + original_history[-1]
+        wait(lambda s: s.get("clipboard") == copied_record, "Record copy did not reach the platform clipboard")
         capture("records")
+        checks.append("Native history/record copy and Unicode/multiline paste use the platform clipboard; rejected title paste preserves the draft")
         home()
         tap("Resume story")
         resumed = screen("say")
@@ -174,6 +198,8 @@ def run(apk, output):
         assert loaded["font_size"] == 1.25 and loaded["text_cps"] == 0
         capture("quick-loaded-dialogue")
         assert loaded["note_result"] is None
+        assert loaded["clipboard"] == copied_record, "Loading a story rewound the live clipboard"
+        assert loaded["records"][0]["values"] == saved_record["values"]
         checks.append("Loading an older Android quick save restores the earlier dialogue/choice state while keeping newer Records and reading preferences")
 
         chosen = choose("Share it with Mira")
@@ -216,6 +242,7 @@ def run(apk, output):
                         and s["note_result"] is None, "Replay did not reset the story and its choice")
         assert len(replayed["records"]) == 1 and len(replayed["saves"]) == 1 and replayed["quick"]
         assert replayed["font_size"] == 1.25 and replayed["text_cps"] == 0
+        assert replayed["clipboard"] == copied_record and replayed["records"][0]["values"] == saved_record["values"]
         capture("replayed-dialogue")
         checks.append("Replay resets story/history/choice state while preserving Records, reading settings, quick and named checkpoints")
 

@@ -73,7 +73,14 @@ init 900 python:
                 identifier = snapshot["records"][0]["id"]
                 _rm_edit_record(form, snapshot, identifier)
                 assert inputs["title"].get_text() == "Before save"
-                inputs["body"].set_text("Edited note\nwith Unicode Blåbær")
+                _rm_copy_record(snapshot["records"][0]["values"], form.fields, form)
+                assert _rm_services.clipboard_text() == "Before save\n\nA lighthouse note"
+                _rm_services.copy_text("Edited note\nwith Unicode Blåbær")
+                _rm_paste_record(form, "title")
+                assert inputs["title"].get_text() == "Before save", "Rejected paste replaced a draft"
+                inputs["body"].set_text("")
+                _rm_paste_record(form, "body")
+                assert inputs["body"].get_text() == "Edited note\nwith Unicode Blåbær"
                 temporary = _rm_services.records().create({"title": "Concurrent change"})
                 _rm_submit_record(form, "records", _rm_services.records().snapshot()["revision"])
                 assert form.needs_reload and form.values["body"].startswith("Edited note")
@@ -115,6 +122,8 @@ init 900 python:
             assert renpy.get_screen("renmodpy_history")
             assert renmodpy_check_counter == 3
             assert any("This dialogue waits" in (entry.what or "") for entry in _history_list)
+            _rm_copy_history("{b}This dialogue waits{/b}\nBlåbær")
+            assert _rm_services.clipboard_text() == "This dialogue waits\nBlåbær"
             _rm_check_capture("history")
             _rm_check_probe.mode = "settings-menu"
             renpy.run(ShowMenu("renmodpy_settings"))
@@ -251,6 +260,7 @@ label renmodpy_check_start:
             "checks": ["home/records/saves rendered", "dialogue/home/resume round trip",
                 "history/settings/records menus preserve the dialogue interaction",
                 "record edit/reload keeps drafts and invisible fields", "multiline record input",
+                "SDL clipboard Unicode/multiline copy/paste and plain history export",
                 "reading settings survive restart and older story load",
                 "populated save browser rendered", "native board rendered",
                 "durable resume exact slot", "named checkpoint create/overwrite/delete",

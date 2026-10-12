@@ -76,7 +76,7 @@ screen choice(items):
 label start:
     $ _rm_services.begin_story()
     $ renmodpy_scene = "The lighthouse"
-    narrator "Someone left a folded note at the lighthouse. The tide returns before sunset."
+    narrator "Someone left a folded note at the lighthouse: ‘Meet at Blåbær Cove before sunset.’\nThe tide is coming in."
     menu:
         "Keep a copy":
             $ note_result = "You kept a copy of the lighthouse note."

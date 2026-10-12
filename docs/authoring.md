@@ -86,3 +86,33 @@ Records fields and the named-checkpoint field can be tapped to enable or
 disable editing. Deselecting the input closes Android's keyboard so the screen
 actions are available. Menu headings wrap within their allotted width,
 including when the larger reading preference is selected.
+
+## Copy and paste
+
+Each Records field has a Paste button. It appends plain clipboard text to the
+end of that field, leaving the other fields unchanged. The Note field accepts
+Unicode and line breaks; single-line fields reject line breaks. Empty text,
+invalid text or a result exceeding the field limit leaves the draft intact.
+Pasting does not save a record or clear a stale-edit/reload requirement.
+
+Copy record exports only fields visible in the current schema, separated by
+blank lines. Literal braces and brackets are retained; hidden stored fields
+are excluded. Story history's Copy line exports the dialogue without Ren'Py
+formatting tags. The sample's lighthouse note includes an accented place name
+and a line break to demonstrate this flow.
+
+Project Python can use the same SDL clipboard through the owning Ren'Py thread:
+
+```python
+from renpy.renmodpy import services as app
+
+app.copy_text("Blåbær\nLiteral {note} [value]")
+text = app.clipboard_text()  # Empty/non-text clipboard returns an empty string.
+```
+
+`app.ClipboardError` reports a platform/backend failure. Production screens
+read the clipboard only after Paste is requested. Clipboard contents belong
+to the operating system and remain outside story saves, alongside the current
+application data; loading or replaying a story does not restore older clipboard
+contents. These operations use the engine's existing clipboard implementation
+and add no Android permissions or additional UI runtime.

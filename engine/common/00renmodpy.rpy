@@ -33,6 +33,27 @@ init -800 python:
             form.message = str(error)
             form.needs_reload = True
 
+    def _rm_copy_record(values, fields, form):
+        text = "\n\n".join(values.get(field.name, "") for field in fields if values.get(field.name))
+        try:
+            _rm_services.copy_text(text)
+            form.message = "Record copied."
+        except (ValueError, _rm_services.ClipboardError) as error:
+            form.message = str(error)
+
+    def _rm_paste_record(form, name):
+        try:
+            form.paste(name, _rm_services.clipboard_text())
+        except _rm_services.ClipboardError as error:
+            form.message = str(error) + " Your draft is kept."
+
+    def _rm_copy_history(text):
+        try:
+            _rm_services.copy_text(renpy.filter_text_tags(text or "", allow=set()))
+            renpy.notify("Dialogue copied.")
+        except (ValueError, _rm_services.ClipboardError) as error:
+            renpy.notify(str(error))
+
     def _rm_delete_record(identifier, revision, form, collection):
         try:
             records = _rm_services.records(collection)
@@ -128,6 +149,11 @@ init -700:
     style renmodpy_button_text is renmodpy_text:
         hover_color "#ffffff"
         insensitive_color "#647583"
+    style renmodpy_clipboard_button is renmodpy_button:
+        padding (12, 8)
+        yminimum 44
+    style renmodpy_clipboard_button_text is renmodpy_button_text:
+        size 22
     style renmodpy_input is input:
         size 28
         color "#ffffff"
@@ -230,6 +256,7 @@ screen renmodpy_history():
                             text _rm_literal(entry.who) bold True
                         text renpy.filter_text_tags(entry.what or "", allow={"b", "i", "u", "s", "color"}):
                             substitute False
+                        textbutton "Copy line" action Function(_rm_copy_history, entry.what)
             if not _history_list:
                 text "Dialogue will appear here as you read." style "renmodpy_caption"
     key "game_menu" action ShowMenu("renmodpy_home")
@@ -300,7 +327,12 @@ screen renmodpy_records(collection="records", title="Records", fields=renmodpy.D
                 textbutton "Home" action ShowMenu("renmodpy_home")
             text "Application data stays current when a story is loaded." style "renmodpy_caption"
             for field in form.fields:
-                text _rm_literal(field.label) style "renmodpy_caption"
+                hbox:
+                    spacing 12
+                    text _rm_literal(field.label) style "renmodpy_caption" xsize 440
+                    textbutton "Paste":
+                        style_prefix "renmodpy_clipboard"
+                        action [input_values[field.name].Disable(), Function(_rm_paste_record, form, field.name)]
                 button:
                     xfill True
                     action input_values[field.name].Toggle()
@@ -339,6 +371,7 @@ screen renmodpy_records(collection="records", title="Records", fields=renmodpy.D
                                 textbutton "Edit":
                                     sensitive not read_error and not form.needs_reload
                                     action Function(_rm_edit_record, form, snapshot, record["id"])
+                                textbutton "Copy record" action Function(_rm_copy_record, record["values"], form.fields, form)
                                 textbutton "Delete":
                                     sensitive not read_error and not form.needs_reload
                                     action Show("confirm",

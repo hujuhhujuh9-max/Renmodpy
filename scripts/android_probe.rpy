@@ -52,10 +52,17 @@ init 900 python:
             "note_result": getattr(renpy.store, "note_result", None),
             "input_text": input_value.get_text() if editable and input_value else None,
             "editable_field": getattr(input_value, "key", "save_name") if editable and input_value else None}
+        # Validation-only observation of the real SDL/platform clipboard.
+        # Production screens read it only when the user requests Paste.
+        try:
+            state["clipboard"] = _rm_services.clipboard_text()
+        except _rm_services.ClipboardError as error:
+            state["clipboard_error"] = str(error)
         if "renmodpy_records" in screens:
             form = renpy.get_screen_variable("form", screen="renmodpy_records")
             state["draft"] = dict(form.values)
             state["editing"] = form.editing_id
+            state["form_message"] = form.message
         temporary = _rm_android_probe.directory / "state.tmp"
         temporary.write_text(_rm_android_json.dumps(state, ensure_ascii=False))
         _rm_android_os.replace(temporary, _rm_android_probe.directory / "state.json")

@@ -20,6 +20,33 @@ _records = {}
 _data_directory = None
 
 
+class ClipboardError(RuntimeError):
+    """The platform clipboard could not provide or accept text."""
+
+
+def copy_text(text):
+    """Copy literal UTF-8 text through Ren'Py's existing SDL clipboard."""
+    owner()
+    if not isinstance(text, str) or "\0" in text:
+        raise ValueError("Use text without null characters.")
+    try:
+        import pygame.scrap
+        pygame.scrap.put(pygame.SCRAP_TEXT, text.encode("utf-8"))
+    except Exception as error:
+        raise ClipboardError("Text could not be copied to the clipboard.") from error
+
+
+def clipboard_text():
+    """Read text only when requested; an empty/non-text clipboard returns ''."""
+    owner()
+    try:
+        import pygame.scrap
+        value = pygame.scrap.get(pygame.SCRAP_TEXT)
+        return value.decode("utf-8").rstrip("\0") if value else ""
+    except Exception as error:
+        raise ClipboardError("Clipboard text could not be read.") from error
+
+
 def bind(engine, *, data_directory=None):
     global _engine, _thread, _records, _data_directory
     _engine, _thread = engine, threading.get_ident()

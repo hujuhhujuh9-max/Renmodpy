@@ -1,6 +1,6 @@
 # Original user prompts
 
-Recorded on 2026-10-11. Project prompts are preserved verbatim and in order,
+Recorded on 2026-10-11 and 2026-10-12. Project prompts are preserved verbatim and in order,
 including voice-dictation spellings. Environment payloads are omitted.
 Later corrections resolve transcription errors; quoted errors are not product
 requirements.
@@ -83,3 +83,7 @@ See [vision.md](vision.md) for the product interpretation and
 
 This correction applies to the transcript in prompt 15. The corrected product
 intent is recorded in [vision.md](vision.md).
+
+## 17 — Continued work, 2026-10-12
+
+> Continue the work we had.

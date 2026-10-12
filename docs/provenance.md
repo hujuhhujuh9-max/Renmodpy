@@ -23,6 +23,13 @@ donor's `runtime/story_ui.py` behavior using Ren'Py's own history, preferences,
 save system and restart path. The form draft/controller contains ordinary data;
 RecordStore ownership remains outside story saves.
 
+Clipboard copy/read reproduces SDK-'s `runtime/capability_demo.py` clipboard
+behavior at donor commit `0fc79f001b2177a9a31dea31fd781b4cc298a510`, using
+Ren'Py's existing SDL clipboard API instead of Flet's service. Native Records
+and history supply copy/paste actions; their UTF-8 encoding follows Ren'Py's
+`CopyToClipboard` implementation in the locked Ren'Py component. Paste appends
+to the selected draft field and validates it before changing that field.
+
 `engine/patches/startup-load-boundary.patch` corrects the donor's removal of
 startup save boundaries in `renpy/savestate.py` and `renpy/common/00start.rpy`.
 Those files originate in the locked Ren'Py component commit

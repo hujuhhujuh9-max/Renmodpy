@@ -91,3 +91,34 @@ class RecordFormTests(unittest.TestCase):
             RecordDraft((FormField("same", "One"), FormField("same", "Two")))
         with self.assertRaises(ValueError):
             RecordDraft(())
+
+    def test_paste_appends_unicode_without_writing_or_clearing_stale_edit(self):
+        identifier = self.records.create({"title": "Original", "body": "First ", "extra": "Keep"})
+        before = self.records.path.read_bytes()
+        self.form.edit(self.records.snapshot(), identifier)
+        self.form.needs_reload = True
+        values = self.form.values
+        self.assertTrue(self.form.paste("body", "Blåbær\n{note} [value]"))
+        self.assertIs(self.form.values, values)
+        self.assertEqual(self.form.values["body"], "First Blåbær\n{note} [value]")
+        self.assertTrue(self.form.needs_reload)
+        self.assertEqual(self.form.editing_id, identifier)
+        self.assertEqual(self.records.path.read_bytes(), before)
+        self.assertEqual(pickle.loads(pickle.dumps(self.form)).values, self.form.values)
+
+    def test_rejected_paste_preserves_all_fields(self):
+        self.form.values.update(title="Keep title", body="Keep body")
+        before = dict(self.form.values)
+        for field, text in (("title", "line\nbreak"), ("title", "carriage\rreturn"),
+                            ("title", "x" * 80), ("body", "x" * 1000),
+                            ("body", ""), ("body", None), ("body", "bad\0text")):
+            self.assertFalse(self.form.paste(field, text))
+            self.assertEqual(self.form.values, before)
+        self.assertEqual(self.records.list(), [])
+
+    def test_paste_uses_custom_field_schema(self):
+        form = RecordDraft((FormField("notes", "Field notes", multiline=True, max_length=20),))
+        self.assertTrue(form.paste("notes", "灯台\nBlåbær"))
+        self.assertEqual(form.values, {"notes": "灯台\nBlåbær"})
+        with self.assertRaises(ValueError):
+            form.paste("body", "Unknown")

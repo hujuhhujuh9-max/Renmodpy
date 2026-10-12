@@ -61,6 +61,25 @@ class RecordDraft:
         self.needs_reload = False
         self.message = "Editing record. Cancel keeps the saved version."
 
+    def paste(self, name, text):
+        """Append clipboard text to a field without writing or discarding a draft."""
+        field = next((field for field in self.fields if field.name == name), None)
+        if field is None:
+            raise ValueError("Unknown record field.")
+        if not isinstance(text, str) or not text:
+            self.message = "The clipboard has no text. Your draft is kept."
+            return False
+        if "\0" in text or (not field.multiline and any(c in text for c in "\r\n")):
+            self.message = field.label + " needs " + ("plain text." if field.multiline else "a single line.") + " Your draft is kept."
+            return False
+        value = self.values[name] + text
+        if len(value) > field.max_length:
+            self.message = field.label + " is too long. Your draft is kept."
+            return False
+        self.values[name] = value
+        self.message = "Pasted into " + field.label + "."
+        return True
+
     def reload(self, snapshot):
         if self.editing_id is not None:
             row = next((row for row in snapshot["records"] if row["id"] == self.editing_id), None)
