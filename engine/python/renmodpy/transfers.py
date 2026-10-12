@@ -27,6 +27,12 @@ def validate_rows(rows):
         validate_values(row["values"])
         if any("\0" in key or "\0" in value for key, value in row["values"].items()):
             raise ValueError("Backup fields cannot contain null characters.")
+        try:
+            for key, value in row["values"].items():
+                key.encode("utf-8")
+                value.encode("utf-8")
+        except UnicodeEncodeError as error:
+            raise ValueError("Backup fields must contain valid Unicode text.") from error
     return copy.deepcopy(rows)
 
 
@@ -44,7 +50,7 @@ def load_records(text):
         raise ValueError("Choose a UTF-8 Records backup no larger than 8 MiB.")
     try:
         data = json.loads(text.removeprefix("\ufeff"))
-    except ValueError as error:
+    except (ValueError, RecursionError) as error:
         raise ValueError("This file is not a valid JSON backup.") from error
     if (not isinstance(data, dict) or set(data) != {"type", "version", "records"}
             or data["type"] != "renmodpy.records" or type(data["version"]) is not int or data["version"] != 1):

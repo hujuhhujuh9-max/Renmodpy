@@ -75,15 +75,30 @@ and Android packaging.
 | Reusable record forms | Add/edit/cancel/delete/reload, multiline fields, custom schemas and collections |
 | Clipboard | Copy visible record fields or plain history lines; append Unicode/multiline text to form drafts |
 | Android text sharing | Native chooser for visible saved record fields and plain history lines; unsaved drafts are kept |
+| Records backups and attachments | Scoped Android import/export, reviewed atomic merge and cache-backed attachment grants |
+| Private text and touch feedback | Android Keystore AES-GCM outside backups; native UI-thread feedback requests |
+| Audio, video and animation | Native Media room with playback controls, looping Movie and ATL motion |
+| Fresh projects | SDK project creator with independent Android/save/build identity |
 | Named checkpoints | Ren'Py save/load, confirmations and stale-save checks |
 | Quick save/load, history, reading settings, replay | Native save slots, history/preferences and full engine restart |
 | Tactics interlude | Saved board/camera state and a native displayable |
-| Android JNI helpers | Donor class-loader setup and retained UI-thread callbacks; broader worker/device coverage pending |
+| Android JNI helpers | Donor class-loader setup, retained UI-thread callbacks and owner-thread worker results |
 
 The example uses a 720×1280 portrait canvas. Screens are included in the
 engine; projects choose which screens and story labels to use. The public
 Python imports are `from renpy import renmodpy` and
 `from renpy.renmodpy import services`.
+
+Create a project from the assembled SDK:
+
+```bash
+python3 .renmodpy-build/renmodpy-sdk/create_project.py /path/to/my-story --name 'My Story' --package org.example.mystory
+```
+
+The creator refuses an existing destination and excludes keys, saves and test
+observers. See [authoring](docs/authoring.md) for native Android services and
+[packaging](docs/build-environment.md#fresh-projects-and-signed-artifacts) for
+APK/AAB signing and updates.
 
 ## Verify the native runtime
 

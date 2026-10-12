@@ -26,11 +26,11 @@ and [capability assessment](https://github.com/hujuhhujuh9-max/SDK-/blob/0fc79f0
 | Custom screens and activities | Ordinary Ren'Py screens, labels, Python and displayables; tactics demonstrates versioned custom save state |
 | Clipboard copy/read and native form paste | Android history/record copy and Unicode/multiline Note paste pass; rejected Title paste keeps the draft; clipboard and pasted Records remain current after old-save load/replay |
 | Plain-text sharing | Real Android choosers receive exact Unicode/multiline history and saved Records on the UI thread; Back keeps the draft/story/settings/saves and leaves input inactive; receiving-app delivery is unverified |
-| Audio, video and ATL animation | Existing Ren'Py facilities remain; equivalent media/output fixtures have not been added to this fork |
+| Audio, video and ATL animation | Example Media room and native output fixtures pass playback, decoded-color and visible-motion checks; Android acceptance in progress |
 | JSON editor, sortable tables, color controls, cancellable async loaders and charts | Reusable native equivalents still need implementation and representative interaction/output checks |
-| File picker/attachment sharing, secure storage, haptics and other Android services | Native engine APIs and device tests still needed for the donor's exercised operations |
+| File picker/attachment sharing, secure storage and haptics | Scoped backup import/export and granted attachments, Keystore AES-GCM and native haptic APIs implemented; full Android interaction validation in progress |
 | Deep links and lifecycle/device coverage | Android live Records draft/app switch, background process kill and cold Home recovery pass alongside force-stop/relaunch; deep links, rotation and wider device/lifecycle profiles remain pending |
-| Project creation, release packaging and update acceptance | RAPT disposable APK and API 35 x86_64 interaction checks pass; physical-device, AAB, production signing and update acceptance remain pending |
+| Project creation, release packaging and update acceptance | Fresh projects compile/lint/package; signed disposable APK/update APK and clean-project AAB builds pass; installed update acceptance in progress; owner-key signing and physical-device checks remain |
 | Rive/Lottie | Optional native integration when a concrete use case requires these formats |
 | WebView | Out of scope by product choice |
 | Phone camera, GPS and audio recording | Remain disabled |

@@ -106,6 +106,9 @@ def run(apk, output, upgrade_apk=None):
         scale = min(physical_width / virtual_width, physical_height / virtual_height)
         x = (physical_width - virtual_width * scale) / 2 + x * scale
         y = (physical_height - virtual_height * scale) / 2 + y * scale
+        origin = current.get("surface_geometry", {}).get("origin", [0, 0])
+        x += origin[0]
+        y += origin[1]
         return str(round(x)), str(round(y))
 
     def tap_point(x, y, current, *, wait_update=True):
@@ -127,6 +130,10 @@ def run(apk, output, upgrade_apk=None):
                     *physical_point(660, end, current), "400")
                 wait(lambda s: s["sequence"] > current["sequence"], "Scroll observer did not update")
         current = wait(lambda s: len(matches(s)) > occurrence, "No tappable control: " + name)
+        sequence = current["sequence"]
+        current = wait(lambda s: s.get("surface_geometry", {}).get("sequence", -1) >= sequence,
+                       "Native surface geometry did not update before the tap")
+        assert "error" not in current["surface_geometry"], current["surface_geometry"]
         button = matches(current)[occurrence]
         x, y, width, height = button["rect"]
         tap_point(x + width / 2, y + height / 2, current, wait_update=wait_update)
@@ -442,7 +449,7 @@ def run(apk, output, upgrade_apk=None):
         fixture_ime = FIXTURE_PACKAGE + "/.UnicodeIme"
         adb("shell", "ime", "enable", fixture_ime)
         adb("shell", "ime", "set", fixture_ime)
-        tap("field:title", scroll="up")
+        replace_field("title", "")
         wait(lambda s: s.get("editable_field") == "title", "Unicode test field did not receive focus")
         wait_device(lambda: adb("exec-out", "run-as", FIXTURE_PACKAGE, "cat", "files/ime.json", check=False).returncode == 0,
                     "The composition keyboard did not open")

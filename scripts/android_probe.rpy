@@ -19,6 +19,8 @@ init 900 python:
     _rm_android_probe.worker_events = []
     _rm_android_probe.worker_errors = []
     _rm_android_probe.haptic_events = []
+    _rm_android_probe.geometry = {"origin": [0, 0], "sequence": 0}
+    _rm_android_probe.geometry_pending = False
     if renpy.android:
         from jnius import autoclass as _rm_android_autoclass
         _rm_android_activity = _rm_android_autoclass("org.renpy.android.PythonSDLActivity").mActivity
@@ -97,6 +99,24 @@ init 900 python:
             _rm_android_probe.launch(activity, chooser)
 
         _rm_android_sharing._launch = _rm_android_share_launch
+        def _rm_android_geometry(sequence):
+            if _rm_android_probe.geometry_pending:
+                return
+            _rm_android_probe.geometry_pending = True
+            def read():
+                try:
+                    # adjustPan moves the entire SDL view when an IME opens.
+                    # Read its actual screen origin on Android's UI thread.
+                    view = _rm_android_autoclass("org.libsdl.app.SDLActivity").getContentView()
+                    position = [0, 0]
+                    view.getLocationOnScreen(position)
+                    _rm_android_probe.geometry = {"origin": position, "sequence": sequence}
+                finally:
+                    _rm_android_probe.geometry_pending = False
+            def failed(error):
+                _rm_android_probe.geometry_pending = False
+                _rm_android_probe.geometry = {"error": str(error), "sequence": sequence}
+            _rm_android_jni.run_on_ui_thread(read, on_error=failed)
     else:
         _rm_android_probe.directory = _rm_android_Path(_rm_android_os.environ["RENMODPY_ANDROID_PROBE_DIRECTORY"])
         config.savedir = str(_rm_android_probe.directory / "saves")
@@ -136,6 +156,7 @@ init 900 python:
             "input_text": input_value.get_text() if editable and input_value else None,
             "editable_field": getattr(input_value, "key", "save_name") if editable and input_value else None}
         if renpy.android:
+            state["surface_geometry"] = dict(_rm_android_probe.geometry)
             state["device_orientation"] = int(_rm_android_activity.getResources().getConfiguration().orientation)
             state["ui_callbacks"] = len(_rm_android_jni._ui_calls)
             state["worker_events"] = list(_rm_android_probe.worker_events)
@@ -164,6 +185,8 @@ init 900 python:
         temporary = _rm_android_probe.directory / "state.tmp"
         temporary.write_text(_rm_android_json.dumps(state, ensure_ascii=False))
         _rm_android_os.replace(temporary, _rm_android_probe.directory / "state.json")
+        if renpy.android:
+            _rm_android_geometry(_rm_android_probe.sequence)
 
     config.always_shown_screens.append("renmodpy_android_observer")
 

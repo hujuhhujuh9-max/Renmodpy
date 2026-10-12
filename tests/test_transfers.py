@@ -21,6 +21,7 @@ class TransferTests(unittest.TestCase):
         self.assertIn("Blåbær", text)
         self.assertNotIn("revision", text)
         self.assertEqual(load_records(text), snapshot["records"])
+        self.assertEqual(load_records("\ufeff" + text), snapshot["records"])
 
     def test_preview_never_mutates_and_merge_keeps_omitted_records_and_fields(self):
         other = self.store.create({"title": "Unrelated"})
@@ -48,7 +49,9 @@ class TransferTests(unittest.TestCase):
         valid = json.loads(dump_records(self.store.snapshot()))
         cases = ["not JSON", json.dumps(dict(valid, version=True)), json.dumps(dict(valid, version=2)),
                  json.dumps(dict(valid, records=valid["records"] * 2)),
-                 json.dumps(dict(valid, records=[{"id": "a" * 32, "values": {"body": "null\0value"}}]))]
+                 json.dumps(dict(valid, records=[{"id": "a" * 32, "values": {"body": "null\0value"}}])),
+                 json.dumps(dict(valid, records=[{"id": "a" * 32, "values": {"body": "\ud800"}}])),
+                 "[" * 2000 + "0" + "]" * 2000]
         before = self.store.path.read_bytes()
         for text in cases:
             with self.assertRaises(ValueError):
