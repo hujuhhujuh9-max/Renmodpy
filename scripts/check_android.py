@@ -223,8 +223,13 @@ def run(apk, output, upgrade_apk=None):
     def document(action, evidence, *, filename=None, cancel=False):
         before = state()
         tap(action, scroll="up", wait_update=False)
-        wait_device(lambda: b"DocumentsActivity" in adb("shell", "dumpsys", "activity", "activities").stdout,
-                    "Android document picker did not open")
+        def picker_open():
+            activity = adb("shell", "dumpsys", "activity", "activities").stdout.decode()
+            (output / (evidence + "-activity.txt")).write_text(activity)
+            return any(DOCUMENT_PACKAGE in line and
+                       ("topResumedActivity" in line or "mResumedActivity" in line)
+                       for line in activity.splitlines())
+        wait_device(picker_open, "Android document picker did not become the resumed activity")
         android_ui_idle(evidence + "-picker", DOCUMENT_PACKAGE)
         capture(evidence + "-picker")
         if cancel:
