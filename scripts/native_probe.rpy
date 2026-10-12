@@ -75,6 +75,11 @@ init 900 python:
                 assert inputs["title"].get_text() == "Before save"
                 _rm_copy_record(snapshot["records"][0]["values"], form.fields, form)
                 assert _rm_services.clipboard_text() == "Before save\n\nA lighthouse note"
+                draft = dict(form.values)
+                _rm_share_record(snapshot["records"][0]["values"], form.fields, form)
+                assert "available on Android" in form.message
+                assert dict(form.values) == draft and form.editing_id == identifier
+                assert not form.needs_reload
                 _rm_services.copy_text("Edited note\nwith Unicode Blåbær")
                 _rm_paste_record(form, "title")
                 assert inputs["title"].get_text() == "Before save", "Rejected paste replaced a draft"
@@ -124,6 +129,8 @@ init 900 python:
             assert any("This dialogue waits" in (entry.what or "") for entry in _history_list)
             _rm_copy_history("{b}This dialogue waits{/b}\nBlåbær")
             assert _rm_services.clipboard_text() == "This dialogue waits\nBlåbær"
+            _rm_share_history("{b}This dialogue waits{/b}\nBlåbær")
+            assert renmodpy_check_counter == 3 and _rm_services.clipboard_text() == "This dialogue waits\nBlåbær"
             _rm_check_capture("history")
             _rm_check_probe.mode = "settings-menu"
             renpy.run(ShowMenu("renmodpy_settings"))
@@ -261,6 +268,7 @@ label renmodpy_check_start:
                 "history/settings/records menus preserve the dialogue interaction",
                 "record edit/reload keeps drafts and invisible fields", "multiline record input",
                 "SDL clipboard Unicode/multiline copy/paste and plain history export",
+                "sharing unavailable on the host preserves Records drafts and the story session",
                 "reading settings survive restart and older story load",
                 "populated save browser rendered", "native board rendered",
                 "durable resume exact slot", "named checkpoint create/overwrite/delete",

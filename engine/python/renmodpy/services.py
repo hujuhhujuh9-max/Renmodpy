@@ -24,6 +24,31 @@ class ClipboardError(RuntimeError):
     """The platform clipboard could not provide or accept text."""
 
 
+class ShareError(RuntimeError):
+    """The Android text chooser could not be requested."""
+
+
+def share_text(text, *, subject=""):
+    """Request Android's plain-text chooser; selecting/sending stays with the user.
+
+    Launch errors are notified on the engine thread. This asynchronous request
+    does not report whether the user shared or dismissed the chooser.
+    """
+    engine = owner()
+    if not isinstance(text, str) or not text.strip() or "\0" in text:
+        raise ValueError("Choose non-empty text without null characters to share.")
+    if not isinstance(subject, str) or "\0" in subject:
+        raise ValueError("Use a text subject without null characters.")
+    if not engine.android:
+        raise ShareError("Text sharing is available on Android.")
+    try:
+        from . import android_sharing
+        android_sharing.share_text(text, subject, on_error=lambda error:
+            engine.invoke_in_main_thread(engine.notify, "Android sharing could not be opened."))
+    except Exception as error:
+        raise ShareError("Android sharing could not be opened.") from error
+
+
 def copy_text(text):
     """Copy literal UTF-8 text through Ren'Py's existing SDL clipboard."""
     owner()

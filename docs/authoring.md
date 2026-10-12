@@ -131,3 +131,32 @@ to the operating system and remain outside story saves, alongside the current
 application data; loading or replaying a story does not restore older clipboard
 contents. These operations use the engine's existing clipboard implementation
 and add no Android permissions or additional UI runtime.
+
+## Share text on Android
+
+History offers Share line and saved Records offer Share record on Android.
+They open Android's system chooser with plain text. Record exports include only
+the visible saved fields, separated by blank lines; an unsaved form draft is
+kept. History exports remove Ren'Py formatting tags. Unicode and line breaks
+are retained. Dismissing the chooser returns to the same live menu and waiting
+story; sharing does not submit a record or change a checkpoint or clipboard.
+
+Project Python can request the same chooser on Ren'Py's owning thread:
+
+```python
+from renpy.renmodpy import services as app
+
+app.share_text("Blåbær\nLiteral {note} [value]", subject="Field notes")
+```
+
+The request is asynchronous. Android view operations run on its UI thread
+through the engine's existing JNI callback, while SDL continues to handle
+suspend/foreground events. A queued native proxy is retained until it finishes
+and is never part of a story save. The return value does not report whether
+the chooser was dismissed or a receiving app sent anything.
+
+Empty/non-text or null-containing values raise `ValueError`. Unsupported
+platforms or immediate dispatch failures raise `app.ShareError`; a later UI
+launch failure is notified on Ren'Py's thread. The built-in screens keep the
+draft on failures. This API shares text only; file attachments and file picking
+still need their own implementation and acceptance.

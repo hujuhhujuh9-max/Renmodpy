@@ -34,12 +34,22 @@ init -800 python:
             form.needs_reload = True
 
     def _rm_copy_record(values, fields, form):
-        text = "\n\n".join(values.get(field.name, "") for field in fields if values.get(field.name))
+        text = _rm_record_text(values, fields)
         try:
             _rm_services.copy_text(text)
             form.message = "Record copied."
         except (ValueError, _rm_services.ClipboardError) as error:
             form.message = str(error)
+
+    def _rm_record_text(values, fields):
+        return "\n\n".join(values.get(field.name, "") for field in fields if values.get(field.name))
+
+    def _rm_share_record(values, fields, form):
+        try:
+            _rm_services.share_text(_rm_record_text(values, fields))
+            form.message = "Choose an app to share this record."
+        except (ValueError, _rm_services.ShareError) as error:
+            form.message = str(error) + " Your draft is kept."
 
     def _rm_paste_record(form, name):
         try:
@@ -52,6 +62,12 @@ init -800 python:
             _rm_services.copy_text(renpy.filter_text_tags(text or "", allow=set()))
             renpy.notify("Dialogue copied.")
         except (ValueError, _rm_services.ClipboardError) as error:
+            renpy.notify(str(error))
+
+    def _rm_share_history(text):
+        try:
+            _rm_services.share_text(renpy.filter_text_tags(text or "", allow=set()))
+        except (ValueError, _rm_services.ShareError) as error:
             renpy.notify(str(error))
 
     def _rm_delete_record(identifier, revision, form, collection):
@@ -256,7 +272,12 @@ screen renmodpy_history():
                             text _rm_literal(entry.who) bold True
                         text renpy.filter_text_tags(entry.what or "", allow={"b", "i", "u", "s", "color"}):
                             substitute False
-                        textbutton "Copy line" action Function(_rm_copy_history, entry.what)
+                        hbox:
+                            spacing 12
+                            style_prefix "renmodpy_clipboard"
+                            textbutton "Copy line" action Function(_rm_copy_history, entry.what)
+                            if renpy.android:
+                                textbutton "Share line" action Function(_rm_share_history, entry.what)
             if not _history_list:
                 text "Dialogue will appear here as you read." style "renmodpy_caption"
     key "game_menu" action ShowMenu("renmodpy_home")
@@ -371,13 +392,18 @@ screen renmodpy_records(collection="records", title="Records", fields=renmodpy.D
                                 textbutton "Edit":
                                     sensitive not read_error and not form.needs_reload
                                     action Function(_rm_edit_record, form, snapshot, record["id"])
-                                textbutton "Copy record" action Function(_rm_copy_record, record["values"], form.fields, form)
                                 textbutton "Delete":
                                     sensitive not read_error and not form.needs_reload
                                     action Show("confirm",
                                         message="Delete this record?",
                                         yes_action=Function(_rm_delete_record, record["id"], snapshot["revision"], form, collection),
                                         no_action=Hide("confirm"))
+                            hbox:
+                                spacing 12
+                                style_prefix "renmodpy_clipboard"
+                                textbutton "Copy record" action Function(_rm_copy_record, record["values"], form.fields, form)
+                                if renpy.android:
+                                    textbutton "Share record" action [input.Disable(), Function(_rm_share_record, record["values"], form.fields, form)]
                 if not snapshot["records"] and not read_error:
                     text "Your saved records will appear here." style "renmodpy_caption"
     key "game_menu" action ShowMenu("renmodpy_home")

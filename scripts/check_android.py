@@ -12,6 +12,7 @@ import time
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = "org.renmodpy.example"
 STATE = f"/data/user/0/{PACKAGE}/files/renmodpy-probe/state.json"
+SHARE = f"/data/user/0/{PACKAGE}/files/renmodpy-probe/share.json"
 ACTIVITY = PACKAGE + "/org.renpy.android.PythonSDLActivity"
 
 
@@ -100,12 +101,13 @@ def run(apk, output):
         y = (physical_height - virtual_height * scale) / 2 + y * scale
         return str(round(x)), str(round(y))
 
-    def tap_point(x, y, current):
+    def tap_point(x, y, current, *, wait_update=True):
         adb("shell", "input", "tap", *physical_point(x, y, current))
-        wait(lambda s: s["boot"] != current["boot"] or s["sequence"] > current["sequence"],
-             "Android observer did not update after the tap")
+        if wait_update:
+            wait(lambda s: s["boot"] != current["boot"] or s["sequence"] > current["sequence"],
+                 "Android observer did not update after the tap")
 
-    def tap(name, *, occurrence=0, scroll=None):
+    def tap(name, *, occurrence=0, scroll=None, wait_update=True):
         def matches(current):
             return [button for button in current.get("buttons", []) if button["name"] == name]
         if scroll:
@@ -120,7 +122,46 @@ def run(apk, output):
         current = wait(lambda s: len(matches(s)) > occurrence, "No tappable control: " + name)
         button = matches(current)[occurrence]
         x, y, width, height = button["rect"]
-        tap_point(x + width / 2, y + height / 2, current)
+        tap_point(x + width / 2, y + height / 2, current, wait_update=wait_update)
+
+    def share_report():
+        result = adb("exec-out", "cat", SHARE, check=False)
+        if result.returncode == 0:
+            try:
+                return json.loads(result.stdout)
+            except ValueError:
+                pass
+        return {}
+
+    def share(name, text, screen_name, evidence, *, scroll=None):
+        before = state()
+        previous = share_report().get("sequence", 0)
+        # SDL may suspend before its next observer tick when the chooser opens.
+        tap(name, scroll=scroll, wait_update=False)
+        def chooser_open():
+            activity = adb("shell", "dumpsys", "activity", "activities").stdout.decode()
+            (output / (evidence + "-activity.txt")).write_text(activity)
+            return any("ChooserActivity" in line and
+                       ("topResumedActivity" in line or "mResumedActivity" in line)
+                       for line in activity.splitlines())
+        wait_device(chooser_open, "Android's share chooser did not become the resumed activity")
+        wait_device(lambda: share_report().get("sequence", 0) > previous,
+                    "The requested Android Intent was not observed")
+        report = share_report()
+        assert report["boot"] == before["boot"] and report["ui_thread"]
+        assert report["chooser_action"] == "android.intent.action.CHOOSER"
+        assert report["action"] == "android.intent.action.SEND" and report["mime"] == "text/plain"
+        assert report["text"] == text and report["subject"] is None and not report["stream"]
+        (output / (evidence + "-intent.json")).write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
+        capture(evidence + "-chooser")
+        adb("shell", "input", "keyevent", "4")
+        returned = wait(lambda s: s["boot"] == before["boot"] and s["sequence"] > before["sequence"]
+                        and screen_name in s["screens"] and s.get("ui_callbacks") == 0,
+                        "Dismissing the share chooser did not restore the live app screen")
+        for key in ("history", "note_result", "records", "saves", "quick", "font_size", "text_cps", "draft", "editing"):
+            assert returned.get(key) == before.get(key), "Sharing changed " + key
+        capture(evidence + "-returned")
+        return returned
 
     def enter(field, text):
         if state().get("editable_field") != field:
@@ -192,6 +233,7 @@ def run(apk, output):
         tap("Copy line")
         wait(lambda s: s.get("clipboard") == original_history[-1], "History copy did not reach the platform clipboard")
         capture("history")
+        share("Share line", original_history[-1], "renmodpy_history", "history-share")
         home()
         tap("Records")
         screen("renmodpy_records")
@@ -223,6 +265,15 @@ def run(apk, output):
         copied_record = "Emulator note\n\n" + original_history[-1]
         wait(lambda s: s.get("clipboard") == copied_record, "Record copy did not reach the platform clipboard")
         capture("records")
+        # Keep an unsaved form draft while sharing the saved row. Its export
+        # must use saved values, and Back from Android must keep that draft.
+        tap("field:title", scroll="up")
+        enter("title", "Keep draft")
+        tap("field:title")
+        wait(lambda s: s.get("editable_field") is None, "Record input stayed active")
+        shared = share("Share record", copied_record, "renmodpy_records", "record-share", scroll="down")
+        assert shared["draft"] == {"title": "Keep draft", "body": ""}
+        checks.append("Real Android text choosers receive Unicode/multiline history and saved Records on the UI thread; dismissal preserves the draft, story, preferences and saves")
         checks.append("Native history/record copy and Unicode/multiline paste use the platform clipboard; rejected title paste preserves the draft")
         home()
         tap("Resume story")

@@ -30,6 +30,17 @@ and history supply copy/paste actions; their UTF-8 encoding follows Ren'Py's
 `CopyToClipboard` implementation in the locked Ren'Py component. Paste appends
 to the selected draft field and validates it before changing that field.
 
+Text sharing in `engine/python/renmodpy/android_sharing.py` uses Android's
+existing `ACTION_SEND`/`ACTION_CHOOSER` Intents with `text/plain`, behind the
+engine's Python services API. Its concrete use case is exporting visible saved
+Records and plain dialogue lines from the same story/app session. The UI-thread
+dispatcher extends the retained donor `android_jni.py` callback from
+`0fc79f001b2177a9a31dea31fd781b4cc298a510`, retaining the native proxy until its
+Android callback returns and reporting errors through Ren'Py's thread queue.
+Android platform calls replace the donor's Flet sharing transport. The donor's
+`runtime/capability_demo.py` exercises file sharing; this addition covers text
+and does not establish parity for its file picker or attachment operation.
+
 `engine/patches/startup-load-boundary.patch` corrects the donor's removal of
 startup save boundaries in `renpy/savestate.py` and `renpy/common/00start.rpy`.
 Those files originate in the locked Ren'Py component commit

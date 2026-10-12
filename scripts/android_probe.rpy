@@ -1,5 +1,6 @@
 # Read-only observer copied only into the disposable emulator-test project.
-# The host drives real Android input; this screen never calls app actions.
+# The host drives real Android input. The probe only reports state and observes
+# the native chooser dispatch requested by an actual tap.
 
 init 900 python:
     import json as _rm_android_json
@@ -13,10 +14,34 @@ init 900 python:
     _rm_android_sys.modules[_rm_android_probe.__name__] = _rm_android_probe
     _rm_android_probe.boot = _rm_android_uuid.uuid4().hex
     _rm_android_probe.sequence = 0
+    _rm_android_probe.share_sequence = 0
     if renpy.android:
         from jnius import autoclass as _rm_android_autoclass
         _rm_android_activity = _rm_android_autoclass("org.renpy.android.PythonSDLActivity").mActivity
         _rm_android_probe.directory = _rm_android_Path(str(_rm_android_activity.getFilesDir().getAbsolutePath())) / "renmodpy-probe"
+        from renpy.renmodpy import android_sharing as _rm_android_sharing
+        from renpy.renmodpy import android_jni as _rm_android_jni
+        from jnius import cast as _rm_android_cast
+        _rm_android_probe.launch = _rm_android_sharing._launch
+
+        def _rm_android_share_launch(activity, chooser):
+            Intent = _rm_android_autoclass("android.content.Intent")
+            Looper = _rm_android_autoclass("android.os.Looper")
+            intent = _rm_android_cast("android.content.Intent", chooser.getParcelableExtra(Intent.EXTRA_INTENT))
+            _rm_android_probe.share_sequence += 1
+            report = {"boot": _rm_android_probe.boot, "sequence": _rm_android_probe.share_sequence,
+                "ui_thread": Looper.getMainLooper().equals(Looper.myLooper()),
+                "chooser_action": chooser.getAction(), "action": intent.getAction(),
+                "mime": intent.getType(), "text": intent.getStringExtra(Intent.EXTRA_TEXT),
+                "subject": intent.getStringExtra(Intent.EXTRA_SUBJECT),
+                "stream": intent.hasExtra(Intent.EXTRA_STREAM)}
+            temporary = _rm_android_probe.directory / "share.tmp"
+            temporary.write_text(_rm_android_json.dumps(report, ensure_ascii=False))
+            _rm_android_os.replace(temporary, _rm_android_probe.directory / "share.json")
+            # Forward the identical observed Intent to the real platform call.
+            _rm_android_probe.launch(activity, chooser)
+
+        _rm_android_sharing._launch = _rm_android_share_launch
     else:
         _rm_android_probe.directory = _rm_android_Path(_rm_android_os.environ["RENMODPY_ANDROID_PROBE_DIRECTORY"])
         config.savedir = str(_rm_android_probe.directory / "saves")
@@ -53,6 +78,8 @@ init 900 python:
             "note_result": getattr(renpy.store, "note_result", None),
             "input_text": input_value.get_text() if editable and input_value else None,
             "editable_field": getattr(input_value, "key", "save_name") if editable and input_value else None}
+        if renpy.android:
+            state["ui_callbacks"] = len(_rm_android_jni._ui_calls)
         # Validation-only observation of the real SDL/platform clipboard.
         # Production screens read it only when the user requests Paste.
         try:

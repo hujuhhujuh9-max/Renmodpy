@@ -9,6 +9,7 @@ from jnius import PythonJavaClass, autoclass, cast, java_method
 
 _Thread = autoclass("java.lang.Thread")
 _app_loader = autoclass("org.renpy.android.PythonSDLActivity").mActivity.getClassLoader()
+_ui_calls = set()
 
 
 class _JavaCall(PythonJavaClass):
@@ -16,8 +17,9 @@ class _JavaCall(PythonJavaClass):
     # Runnable is a system interface; the native callback belongs to the APK.
     __javacontext__ = "system"
 
-    def __init__(self, handler):
+    def __init__(self, handler, on_finish=None):
         self.handler = handler
+        self.on_finish = on_finish
         self.result = None
         self.error = None
         self.called = False
@@ -37,6 +39,8 @@ class _JavaCall(PythonJavaClass):
             self.error = error
         finally:
             thread.setContextClassLoader(original)
+            if self.on_finish is not None:
+                self.on_finish(self)
 
     def execute(self):
         self.runnable.run()
@@ -55,4 +59,28 @@ def app_loader_callback(handler):
 def call_with_app_class_loader(handler, *args, **kwargs):
     """Run JNI work from a Python worker after the owner prepared its callback."""
     return app_loader_callback(lambda: handler(*args, **kwargs))()
+
+
+def run_on_ui_thread(handler, *, on_error=None):
+    """Queue a retained JNI callback on Android's UI thread without blocking SDL.
+
+    Prepare this callback on the Android owner thread.
+    on_error runs on that UI thread; use Ren'Py's invoke_in_main_thread to
+    deliver any engine notification. The native proxy stays alive until run ends.
+    """
+    def finished(call):
+        try:
+            if call.error is not None and on_error is not None:
+                on_error(call.error)
+        finally:
+            _ui_calls.discard(call)
+
+    call = _JavaCall(handler, on_finish=finished)
+    _ui_calls.add(call)
+    try:
+        activity = autoclass("org.renpy.android.PythonSDLActivity").mActivity
+        activity.runOnUiThread(call.runnable)
+    except Exception:
+        _ui_calls.discard(call)
+        raise
 
