@@ -117,3 +117,16 @@ choice and later dialogue restore, and that returning to the live story still
 clears the temporary save. The recovery-cleanup patch is recorded in the SDK
 input inventory. This host policy check complements the Android OS interaction
 checks above.
+
+Sharing checks tap History's Share line and Records' Share record, then wait
+for Android's actual chooser activity. The validation observer inspects the
+identical Java Intent passed to `startActivity`, recording its chooser/send
+actions, `text/plain` MIME type, Unicode/multiline text, absent attachment and
+Android main-Looper affinity. It observes a request from a real tap and forwards
+the same Intent through the ordinary launcher; it never selects a receiving app.
+Android Back dismisses the chooser. The harness requires the same process,
+draft, waiting story, Records, reading settings and saves on return, and verifies
+that the retained JNI callback has been released. Chooser/return screenshots,
+activity dumps and Intent JSON are included in the Android evidence artifact.
+Receiving-app delivery and file attachment/picker behavior are outside this
+text-sharing check.

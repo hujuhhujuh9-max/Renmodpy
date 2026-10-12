@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = "org.renmodpy.example"
 STATE = f"/data/user/0/{PACKAGE}/files/renmodpy-probe/state.json"
 SHARE = f"/data/user/0/{PACKAGE}/files/renmodpy-probe/share.json"
+SHARE_ERROR = f"/data/user/0/{PACKAGE}/files/renmodpy-probe/share-error.json"
 ACTIVITY = PACKAGE + "/org.renpy.android.PythonSDLActivity"
 
 
@@ -124,8 +125,8 @@ def run(apk, output):
         x, y, width, height = button["rect"]
         tap_point(x + width / 2, y + height / 2, current, wait_update=wait_update)
 
-    def share_report():
-        result = adb("exec-out", "cat", SHARE, check=False)
+    def share_report(path=SHARE):
+        result = adb("exec-out", "cat", path, check=False)
         if result.returncode == 0:
             try:
                 return json.loads(result.stdout)
@@ -139,6 +140,11 @@ def run(apk, output):
         # SDL may suspend before its next observer tick when the chooser opens.
         tap(name, scroll=scroll, wait_update=False)
         def chooser_open():
+            state()
+            error = share_report(SHARE_ERROR)
+            if error.get("boot") == before["boot"]:
+                (output / "share-error.json").write_text(json.dumps(error, indent=2, ensure_ascii=False) + "\n")
+                raise RuntimeError("Native share dispatch failed: " + error["traceback"])
             activity = adb("shell", "dumpsys", "activity", "activities").stdout.decode()
             (output / (evidence + "-activity.txt")).write_text(activity)
             return any("ChooserActivity" in line and

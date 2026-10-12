@@ -8,6 +8,7 @@ init 900 python:
     import sys as _rm_android_sys
     import types as _rm_android_types
     import uuid as _rm_android_uuid
+    import traceback as _rm_android_traceback
     from pathlib import Path as _rm_android_Path
 
     _rm_android_probe = _rm_android_types.ModuleType("renmodpy_android_probe")
@@ -23,6 +24,27 @@ init 900 python:
         from renpy.renmodpy import android_jni as _rm_android_jni
         from jnius import cast as _rm_android_cast
         _rm_android_probe.launch = _rm_android_sharing._launch
+        _rm_android_probe.request_share = _rm_android_sharing.share_text
+
+        def _rm_android_share_error(error):
+            report = {"boot": _rm_android_probe.boot, "error": str(error),
+                "type": type(error).__name__, "traceback": "".join(
+                    _rm_android_traceback.format_exception(type(error), error, error.__traceback__))}
+            temporary = _rm_android_probe.directory / "share-error.tmp"
+            temporary.write_text(_rm_android_json.dumps(report, ensure_ascii=False))
+            _rm_android_os.replace(temporary, _rm_android_probe.directory / "share-error.json")
+
+        def _rm_android_share_request(text, subject, on_error):
+            def failed(error):
+                _rm_android_share_error(error)
+                on_error(error)
+            try:
+                return _rm_android_probe.request_share(text, subject, on_error=failed)
+            except Exception as error:
+                _rm_android_share_error(error)
+                raise
+
+        _rm_android_sharing.share_text = _rm_android_share_request
 
         def _rm_android_share_launch(activity, chooser):
             Intent = _rm_android_autoclass("android.content.Intent")
