@@ -108,12 +108,34 @@ init 900 python:
                     assert not form.needs_reload and dict(form.values) == imported_draft
                 finally:
                     _rm_services.pick_text = original_picker
-                # Evaluate the Android-only controls on the real native screen
-                # without changing the host engine's platform or JNI backend.
-                renpy.get_screen("renmodpy_records").scope["renpy"] = _rm_check_types.SimpleNamespace(android=True)
-                _rm_check_probe.mode = "records-android"
+                _rm_check_probe.sort_draft = dict(form.values)
+                _rm_check_probe.sort_temporary = _rm_services.records().create({"title": "alpha Ω"})
+                _rm_check_probe.sort_rows = _rm_services.records().list()
+                renpy.set_screen_variable("sort_mode", "title", screen="renmodpy_records")
+                _rm_check_probe.mode = "records-sorted"
                 return None
             return True
+        if mode == "records-sorted":
+            rows = renpy.get_screen_variable("displayed_records", screen="renmodpy_records")
+            assert [row["id"] for row in rows] == [row["id"] for row in reversed(_rm_check_probe.sort_rows)]
+            assert _rm_services.records().list() == _rm_check_probe.sort_rows
+            form = renpy.get_screen_variable("form", screen="renmodpy_records")
+            assert dict(form.values) == _rm_check_probe.sort_draft
+            renpy.set_screen_variable("sort_mode", "saved", screen="renmodpy_records")
+            _rm_check_probe.mode = "records-saved-order"
+            return None
+        if mode == "records-saved-order":
+            rows = renpy.get_screen_variable("displayed_records", screen="renmodpy_records")
+            assert rows == _rm_check_probe.sort_rows
+            form = renpy.get_screen_variable("form", screen="renmodpy_records")
+            assert dict(form.values) == _rm_check_probe.sort_draft
+            _rm_services.records().delete(_rm_check_probe.sort_temporary)
+            _rm_reload_records(form, "records")
+            # Evaluate the Android-only controls on the real native screen
+            # without changing the host engine's platform or JNI backend.
+            renpy.get_screen("renmodpy_records").scope["renpy"] = _rm_check_types.SimpleNamespace(android=True)
+            _rm_check_probe.mode = "records-android"
+            return None
         if mode == "records-android":
             form = renpy.get_screen_variable("form", screen="renmodpy_records")
             inputs = renpy.get_screen_variable("input_values", screen="renmodpy_records")
@@ -310,6 +332,7 @@ label renmodpy_check_start:
                 "sharing unavailable on the host preserves Records drafts and the story session",
                 "Android-only Records share controls evaluate and disable input without changing the draft",
                 "backup preview/confirmed import keeps edited drafts and hidden fields and requires reload",
+                "casefold Records sorting and saved order retain stored rows and the edited draft",
                 "reading settings survive restart and older story load",
                 "populated save browser rendered", "native board rendered",
                 "durable resume exact slot", "named checkpoint create/overwrite/delete",

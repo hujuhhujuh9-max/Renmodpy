@@ -426,7 +426,7 @@ screen renmodpy_records(collection="records", title="Records", fields=renmodpy.D
     default sort_mode = "saved"
     default input_values = {field.name: DictInputValue(form.values, field.name, default=(index == 0)) for index, field in enumerate(form.fields)}
     $ snapshot, read_error = _rm_record_snapshot(collection)
-    $ displayed_records = (sorted(snapshot["records"], key=lambda record: record["values"].get(form.fields[0].name, "").casefold()) if sort_mode == "title" else snapshot["records"])
+    $ displayed_records = (sorted(snapshot["records"], key=lambda record, field=form.fields[0].name: record["values"].get(field, "").casefold()) if sort_mode == "title" else snapshot["records"])
     $ _rm_transfer_recovery(form, transfer)
     add Solid("#101d27")
     viewport:
