@@ -70,7 +70,7 @@ and Android packaging.
 
 | Part | Native implementation |
 | --- | --- |
-| Home / Start / Return / Resume | Ren'Py menu contexts and a durable resume slot |
+| Home / Start / Return / Resume | Ren'Py menu contexts, a durable resume slot and latest Android background recovery |
 | Records | Versioned JSON, atomic writes, stale-edit checks; outside story saves |
 | Reusable record forms | Add/edit/cancel/delete/reload, multiline fields, custom schemas and collections |
 | Clipboard | Copy visible record fields or plain history lines; append Unicode/multiline text to form drafts |
@@ -105,17 +105,22 @@ RenFletPy is the behavioral benchmark. See [feature parity](docs/feature-parity.
 for implemented features and remaining Android-service/control gaps, and
 [authoring](docs/authoring.md) for an integrated app/story project.
 
-The [Android validation run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38195036572)
+The [Android validation run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38199188437)
 passes on Android 15/API 35 x86_64: real input, cold Resume, older Quick load,
 named save/overwrite/load/delete and replay preserve the continuous app/story
 session and current Records/settings. Native history/record copy and Unicode
 clipboard paste also pass, including rejecting invalid field input without
-losing a draft. A startup save-boundary fix prevents the first-dialogue cold
-Resume crash found by the emulator. All 50 Python tests and
-both native renderer checks pass. The [Codex handoff](docs/codex-handoff.md)
+losing a draft. App switching preserves the live Records draft, and background
+process recovery restores the latest waiting choice or dialogue. Switching
+away from cold Home before Resume keeps its pending recovery checkpoint.
+Engine patches fix the first-dialogue save boundary, cold Home cleanup and a
+crash when switching apps with the keyboard open by handling SDL suspension
+before rendering.
+All 50 Python tests, 25 checks with each native renderer and 10 Android
+acceptance checks pass. The [Codex handoff](docs/codex-handoff.md)
 links the receipts, screenshots and disposable validation APK.
 
-Physical-device/ARM, broader Android lifecycle/services, AAB and update
+Physical-device/ARM, rotation/deep links, other Android services, AAB and update
 acceptance remain pending. Full RenFletPy parity is still work ahead.
 Rive/Lottie and richer controls are
 optional additions when a concrete use case needs them. WebView is out of

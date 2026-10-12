@@ -1,0 +1,196 @@
+{
+  "verified_at_utc": "2026-10-12T03:27:54Z",
+  "review_head": "8f472f062ec8111f38d8af7d516752e06f8f4c40",
+  "run_url": "https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38199188437",
+  "android_job_url": "https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38199188437/job/114648542071",
+  "host_tests": 50,
+  "apk": {
+    "apk": "org.renmodpy.example-0.1.0-1791775151-release.apk",
+    "package": "org.renmodpy.example",
+    "sha256": "236f41914ff8bb7a241fbd373c10efc6fb58e95f8d7b6d90dc016d7ad0df956c",
+    "validation_fixture": true,
+    "release": false,
+    "target_api": 36
+  },
+  "android": {
+    "result": "passed",
+    "platform": "Android emulator",
+    "engine": "Ren'Py 8.5.3.26051504",
+    "api": "35",
+    "abi": "x86_64",
+    "checks": [
+      "Android app switching preserves the live Records draft, waiting story and reading settings without saving a record",
+      "Native history/record copy and Unicode/multiline paste use the platform clipboard; rejected title paste preserves the draft",
+      "Android taps move through Home/history/settings/Records and return to the exact dialogue",
+      "Force-stop/relaunch and durable Resume preserve story position, private Records and reading preferences",
+      "A background process kill recovers the waiting choice; switching apps from cold Home keeps that latest checkpoint",
+      "Native background recovery restores dialogue and choices newer than the explicit saves while keeping Records and reading settings",
+      "Loading an older Android quick save restores the earlier dialogue/choice state while keeping newer Records and reading preferences",
+      "Native save-name input, create/confirmed overwrite, process restart and confirmed named-load restore the chosen dialogue",
+      "Replay resets story/history/choice state while preserving Records, reading settings, quick and named checkpoints",
+      "Cancelling deletion retains the checkpoint; confirming deletes only the named checkpoint"
+    ],
+    "physical_device": false,
+    "release": false
+  },
+  "native_xvfb": {
+    "result": "passed",
+    "engine": "Ren'Py 8.5.3.26051504",
+    "checks": [
+      "home/records/saves rendered",
+      "dialogue/home/resume round trip",
+      "history/settings/records menus preserve the dialogue interaction",
+      "record edit/reload keeps drafts and invisible fields",
+      "multiline record input",
+      "SDL clipboard Unicode/multiline copy/paste and plain history export",
+      "reading settings survive restart and older story load",
+      "populated save browser rendered",
+      "native board rendered",
+      "durable resume exact slot",
+      "named checkpoint create/overwrite/delete",
+      "real engine restart/load",
+      "board and camera restored",
+      "story variable restored",
+      "newer records preserved",
+      "completion clears resume but keeps named checkpoints",
+      "quick save restores exact story/board state after restart",
+      "replay resets story/history while keeping records, reading settings, quick and named saves",
+      "ordinary startup and fresh-process Home Resume/Quick load restore the first dialogue",
+      "cold Home app switch keeps the latest background checkpoint",
+      "fresh-process recovery restores a waiting choice and later chosen dialogue",
+      "recovery keeps newer Records and reading preferences",
+      "live foreground cleanup keeps the story session and quick save",
+      "queued/buffered SDL suspend runs before renderer redraw and preserves the live dialogue",
+      "added engine modules/screens present in Android distribution"
+    ],
+    "android_distribution": {
+      "name": "renmodpy_native_example-0.1.0-android",
+      "files": [
+        ".android.json",
+        "game/script.rpyc",
+        "renpy/common/00renmodpy.rpyc",
+        "renpy/renmodpy/__pycache__/__init__.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/android_jni.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/android_jni_executor.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/board.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/board_session.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/forms.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/records.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/services.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/tactics.cpython-312.pyc"
+      ],
+      "orientation": "portrait",
+      "permissions": [],
+      "apk_built": false
+    }
+  },
+  "native_software": {
+    "result": "passed",
+    "engine": "Ren'Py 8.5.3.26051504",
+    "checks": [
+      "home/records/saves rendered",
+      "dialogue/home/resume round trip",
+      "history/settings/records menus preserve the dialogue interaction",
+      "record edit/reload keeps drafts and invisible fields",
+      "multiline record input",
+      "SDL clipboard Unicode/multiline copy/paste and plain history export",
+      "reading settings survive restart and older story load",
+      "populated save browser rendered",
+      "native board rendered",
+      "durable resume exact slot",
+      "named checkpoint create/overwrite/delete",
+      "real engine restart/load",
+      "board and camera restored",
+      "story variable restored",
+      "newer records preserved",
+      "completion clears resume but keeps named checkpoints",
+      "quick save restores exact story/board state after restart",
+      "replay resets story/history while keeping records, reading settings, quick and named saves",
+      "ordinary startup and fresh-process Home Resume/Quick load restore the first dialogue",
+      "cold Home app switch keeps the latest background checkpoint",
+      "fresh-process recovery restores a waiting choice and later chosen dialogue",
+      "recovery keeps newer Records and reading preferences",
+      "live foreground cleanup keeps the story session and quick save",
+      "queued/buffered SDL suspend runs before renderer redraw and preserves the live dialogue",
+      "added engine modules/screens present in Android distribution"
+    ],
+    "android_distribution": {
+      "name": "renmodpy_native_example-0.1.0-android",
+      "files": [
+        ".android.json",
+        "game/script.rpyc",
+        "renpy/common/00renmodpy.rpyc",
+        "renpy/renmodpy/__pycache__/__init__.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/android_jni.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/android_jni_executor.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/board.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/board_session.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/forms.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/records.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/services.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/tactics.cpython-312.pyc"
+      ],
+      "orientation": "portrait",
+      "permissions": [],
+      "apk_built": false
+    }
+  },
+  "lifecycle_evidence": {
+    "observed_app_starts": 5,
+    "observed_background_entries": 4,
+    "observed_foreground_returns": 2,
+    "physical_size": [
+      720,
+      1280
+    ],
+    "density_dpi": 160,
+    "stopped_activity": "org.renmodpy.example/org.renpy.android.PythonSDLActivity",
+    "engine_tracebacks": 0,
+    "screenshots": [
+      "background-restored-draft.png",
+      "background-recovery-home.png",
+      "background-choice.png",
+      "background-dialogue.png"
+    ]
+  },
+  "regressions": [
+    {
+      "platform": "real native engine",
+      "source_revision": "aadefd6f421bfa0163fa187abfbdfdc8a06501f0",
+      "failure": "Switching apps from cold Home discarded the recovery checkpoint",
+      "fix": "engine/patches/mobile-recovery-preservation.patch"
+    },
+    {
+      "platform": "Android API 35 x86_64 emulator",
+      "source_revision": "726813a6226c4b36d8109a1434c9b2fc9854c752",
+      "run_url": "https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38198256469",
+      "evidence_url": "https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38198256469/artifacts/11724856396",
+      "failure": "Backgrounding Records with its keyboard open called OpenGL with no current context; renderer resize raised ShaderError before recovery saving",
+      "fix": "engine/patches/mobile-suspend-before-render.patch"
+    }
+  ],
+  "source_files": {
+    "engine/common/00renmodpy.rpy": "f06d5c9a6ad7988b0c9aa272bb67dc929353b815b1d7642e9e8ea760362fe57d",
+    "engine/patches/mobile-recovery-preservation.patch": "89cb17361c304b11299af08d9081d2192778631f0fb5764b1bdc619efba10e49",
+    "engine/patches/mobile-suspend-before-render.patch": "1f4424c075d0cd02f8cb3ae9db83b9c54db86f7b2fdd281c4f63c611635dcb4b",
+    "engine/patches/startup-load-boundary.patch": "df0a86703fd76586891ef69156a34b26d5bf82cb0e209c3fbb196a15e191d837",
+    "engine/python/renmodpy/__init__.py": "0e20252279c60d54a33d9bd1c73c21a87236222cd67221817f1a6c9f2c8db8b5",
+    "engine/python/renmodpy/android_jni.py": "fe25c4ae1a8cc1375b4dcd0a9bf122b9669f25763ceb03c90fb8d8ffce6115df",
+    "engine/python/renmodpy/android_jni_executor.py": "f35a4a838ba4c998c6d5ef8456e0b72e2b36727b46b55423ca7b6f9d6fce62cd",
+    "engine/python/renmodpy/board.py": "bb0d7f40acc3e17d43810aef7c070ae2cf3926467017f3f9e87db6dd0ee015d0",
+    "engine/python/renmodpy/board_session.py": "9adf41acee3017e71c8756dc413f31ddff2e0077ec2091d78506bd79a1e6eda8",
+    "engine/python/renmodpy/forms.py": "676e00678d801b2c87b5e085a1198115a05451dc950d8eddd3cf1176a24aea61",
+    "engine/python/renmodpy/records.py": "1edb283817911a67055e0eb4344f12fa8dbc9db613bbadbcc4bf5c905cc100d0",
+    "engine/python/renmodpy/services.py": "1c3adf282b10c17ade8d4fdda11888aa34dd2a6426a5421b15fddb732cbbe6e3",
+    "engine/python/renmodpy/tactics.py": "1eaabfb127e9a4186c2dd2f4697239f2596c841dd5cb1ca8a6ed446b31e18ff1",
+    "examples/native-app/.android.json": "4f9a732503e1cb71d2b1022b582232c9c299cf974eef8454d2d5d3cadae00429",
+    "examples/native-app/game/script.rpy": "8b38a5cb3115af09ae5ca70b18e43df41fd42a28aa094047b514db5f14c80a44",
+    "sdk-lock.json": "2fce1b084becef03f9b6125eef167f6cbdf97eae1676a7389f7a8f15586b56d2"
+  },
+  "artifact_urls": {
+    "android_evidence": "https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38199188437/artifacts/11724329932",
+    "validation_apk": "https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38199188437/artifacts/11724788405",
+    "native_evidence": "https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38199188437/artifacts/11724812924"
+  },
+  "artifacts_expire_at_utc": "2026-10-26T03:20:03Z"
+}

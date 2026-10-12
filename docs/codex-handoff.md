@@ -15,7 +15,7 @@ Apply later user corrections when interpreting voice-transcription errors.
 - Repository: `hujuhhujuh9-max/Renmodpy`.
 - Review branch: `bootstrap/native-foundation`.
 - Draft review: [PR #1](https://github.com/hujuhhujuh9-max/Renmodpy/pull/1).
-- Verified engine/test revision: `aadefd6f421bfa0163fa187abfbdfdc8a06501f0`.
+- Verified engine/test revision: `8f472f062ec8111f38d8af7d516752e06f8f4c40`.
 - Donor benchmark: SDK- `0fc79f001b2177a9a31dea31fd781b4cc298a510`.
 - Locked Ren'Py component: `0d58d1fc5b5fed87cb0f54eb717233d05643f506`.
 - Ren'Py/RAPT archives, checksums and notices remain pinned in `sdk-lock.json`.
@@ -41,7 +41,15 @@ keeps the draft unchanged and never writes a record. Stale edits still require
 Reload before saving. Production clipboard reads occur only after Paste is
 requested, and all operations run on Ren'Py's owning thread through SDL.
 
-The [completed CI run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38195036572)
+The later lifecycle continuation preserves the newest native background
+checkpoint when a freshly reopened Home is backgrounded before Resume. It
+also handles queued/buffered SDL suspend events before renderer resize/redraw,
+fixing the crash when switching apps with the keyboard open, discovered by the emulator.
+Normal app switching retains the live Records draft and story session;
+background process kills recover the waiting story choice or later dialogue.
+Submitted Records and reading settings remain current.
+
+The [completed CI run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38199188437)
 passes all three jobs at the verified revision:
 
 - 50 Python state/storage/form/build/clipboard tests.
@@ -49,11 +57,13 @@ passes all three jobs at the verified revision:
   quick load, replay, Android distribution-input checks and the new ordinary
   startup/first-dialogue cold-load regression with both Linux renderers.
   Both renderers also pass SDL clipboard round trips and plain history export.
+  Each passes 25 checks, including three-process choice/dialogue recovery and
+  queued/buffered SDL suspend events handled before renderer redraw.
 - RAPT APK compilation and real Android interaction on a rooted Android 15 /
   API 35 x86_64 emulator, at 720×1280 and 160 dpi.
 
 The Android harness drives ADB taps and keyboard events; its APK observer only
-reports state. The seven completed acceptance checks cover:
+reports state. The ten completed acceptance checks cover:
 
 1. Home/history/settings/Records navigation and Return to the waiting dialogue.
 2. Force-stop/relaunch and durable Resume of the first dialogue, with Records
@@ -69,9 +79,19 @@ reports state. The seven completed acceptance checks cover:
 7. Native history/record copy, Unicode/multiline paste and rejected Title paste
    preserving the draft. Copied clipboard contents and pasted Records remain
    current through cold restart, older-save loading and replay.
+8. Android system Home/foreground return with the Records keyboard active,
+   preserving the live draft, waiting story and preferences without submitting
+   a record; the temporary recovery file is cleared on normal return.
+9. Android system Home, stopped-activity confirmation, background process kill
+   and cold Resume recovering the waiting choice. Switching apps again from
+   that cold Home preserves the pending recovery file byte-for-byte.
+10. Another background process kill and Resume recovering the later chosen
+    dialogue, newer than the explicit Home/quick saves, with current Records
+    and reading preferences intact.
 
-The new Records screenshots show the pasted accented, multiline lighthouse
-note and the copied saved record. The earlier foundation run captured the
+The lifecycle screenshots show the retained Records draft and recovered
+choice/dialogue. Records screenshots also show the pasted accented, multiline
+lighthouse note and the copied saved record. The earlier foundation run captured the
 Android software keyboard during entry.
 Menu headings now fit their reserved width, including with larger text, and
 the save-name field can be deselected to close the keyboard.
@@ -79,26 +99,55 @@ the save-name field can be deselected to close the keyboard.
 ## Evidence and validation APK
 
 The latest receipts, APK checksum and engine/example input hashes are
-preserved in [android-clipboard-acceptance.json](android-clipboard-acceptance.json).
-The earlier [foundation receipt](android-acceptance.json) remains unchanged. Downloaded CI
+preserved in [android-lifecycle-acceptance.json](android-lifecycle-acceptance.json).
+The earlier [clipboard](android-clipboard-acceptance.json) and
+[foundation](android-acceptance.json) receipts remain unchanged. Downloaded CI
 input hashes were compared with the review code and match. Later documentation
 updates do not change those engine/example inputs.
 
-- [Android job and log](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38195036572/job/114635711451)
-- [Android state, screenshots, logcat and build receipt](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38195036572/artifacts/11723525771)
-- [Disposable validation APK and checksum receipt](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38195036572/artifacts/11723176887)
-- [Both native renderer receipts and screenshots](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38195036572/artifacts/11722099205)
+- [Android job and log](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38199188437/job/114648542071)
+- [Android state, screenshots, stopped activity, logcat and build receipt](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38199188437/artifacts/11724329932)
+- [Disposable validation APK and checksum receipt](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38199188437/artifacts/11724788405)
+- [Both native renderer receipts and screenshots](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38199188437/artifacts/11724812924)
 
 The artifact retention period is 14 days, expiring on 2026-10-26. The committed
 receipt remains available after the downloadable artifacts expire.
 
-The APK is `org.renmodpy.example-0.1.0-1791771382-release.apk`, targeting API 36.
+The APK is `org.renmodpy.example-0.1.0-1791775151-release.apk`, targeting API 36.
 Its SHA-256 is
-`20fda9c62c7895117b2d56616d2a6ee23494e1548d20ed6e63d83483bff4f295`.
+`236f41914ff8bb7a241fbd373c10efc6fb58e95f8d7b6d90dc016d7ad0df956c`.
 Despite RAPT's filename, this is a disposable test fixture with a temporary
 signing key and read-only observer; the build receipt marks `release: false`.
 
 ## Blockers resolved during continuation
+
+The later 2026-10-12 continuation focuses on Android background recovery.
+The native lifecycle regression reproduced a pending `_reload-1` deletion:
+a fresh process opened Home, skipped background saving because it was in the
+main menu, then unconditionally deleted the previous process's recovery on
+foreground return. This fell back to an older explicit Resume checkpoint.
+`engine/patches/mobile-recovery-preservation.patch` keeps recovery under the
+same main-menu/replay conditions that skip mobile saving. Normal foreground
+return to the live story still removes its temporary checkpoint.
+
+The [first lifecycle Android run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38198256469)
+then exposed another real runtime failure while backgrounding Records with
+the Android keyboard open. Logcat reported an OpenGL call with no current
+context, followed by a shader error during renderer resize, before the SDL
+suspend handler could write the recovery save. Its
+[failure evidence](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38198256469/artifacts/11724856396)
+contains the last draft state, screenshot and logcat.
+`engine/patches/mobile-suspend-before-render.patch` handles queued and buffered
+SDL suspend events before renderer resize/redraw using the existing native
+save/wait/foreground handler. A new native real-event regression checks both
+event paths and continued dialogue after foreground return.
+
+The verified CI run passes both fixes on Android as well as the host checks.
+Downloaded logcat records four native background entries, two live foreground
+returns and five process starts (initial launch, two force-stop restarts and
+two background process kills), with no engine traceback. The stopped-activity
+dump confirms the example reached `STOPPED`; the committed receipt preserves
+these observations and both resolved regression identities.
 
 The earlier [Android attempt](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38176677164)
 built an APK but failed before emulator boot because the emulator action could
@@ -126,11 +175,11 @@ same deletion checks; no speculative filesystem change was made.
 ## Continue from this foundation
 
 Use [feature-parity.md](feature-parity.md) for capability gaps. Physical-device
-and ARM acceptance, Unicode IME composition, rotation/background recovery,
+and ARM acceptance, Unicode IME composition, rotation/deep links and wider lifecycle profiles,
 board touch/camera acceptance, other Android service operations, AAB packaging and
 same-key updates remain unverified. Audio/video/ATL and richer app controls
 still need representative native fixtures or implementation. The x86_64
-emulator pass establishes the seven checks above, not full RenFletPy parity.
+emulator pass establishes the ten checks above, not full RenFletPy parity.
 
 Keep Ren'Py/SDL as the startup/rendering/story/Python owner. Added functionality
 belongs in the engine's Python API, common screens or native Android support.
