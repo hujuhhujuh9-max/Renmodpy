@@ -7,6 +7,7 @@ from pathlib import Path
 import shlex
 import subprocess
 import time
+import xml.etree.ElementTree as ET
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -134,15 +135,31 @@ def run(apk, output):
                 pass
         return {}
 
-    def android_ui_idle(evidence):
+    def android_ui_idle(evidence, package):
         # The resumed-activity dump can precede the chooser's first frame.
         # UIAutomator waits for the actual Android view hierarchy to be idle.
         path = "/sdcard/renmodpy-ui.xml"
         adb("shell", "rm", "-f", path)
-        adb("shell", "uiautomator", "dump", "--compressed", path)
-        hierarchy = adb("exec-out", "cat", path).stdout
-        (output / (evidence + "-ui.xml")).write_bytes(hierarchy)
-        return hierarchy
+        deadline = time.monotonic() + 60
+        attempts = []
+        while time.monotonic() < deadline:
+            result = adb("shell", "uiautomator", "dump", "--compressed", path, check=False)
+            hierarchy = adb("exec-out", "cat", path, check=False).stdout
+            try:
+                tree = ET.fromstring(hierarchy)
+                ready = any(node.get("package") == package for node in tree.iter("node"))
+            except ET.ParseError:
+                ready = False
+            # UIAutomator can exit 0 after its idle timeout without a file;
+            # require a real hierarchy from the expected foreground package.
+            attempts.append({"returncode": result.returncode, "stdout": result.stdout.decode(errors="replace"),
+                             "stderr": result.stderr.decode(errors="replace"), "ready": ready})
+            (output / (evidence + "-capture.json")).write_text(json.dumps(attempts, indent=2) + "\n")
+            if ready:
+                (output / (evidence + "-ui.xml")).write_bytes(hierarchy)
+                return
+            time.sleep(0.4)
+        raise RuntimeError("Android view capture did not become ready for " + package)
 
     def share(name, text, screen_name, evidence, *, scroll=None):
         before = state()
@@ -170,7 +187,7 @@ def run(apk, output):
         assert report["action"] == "android.intent.action.SEND" and report["mime"] == "text/plain"
         assert report["text"] == text, "Android text extra did not match: " + repr(report)
         assert report["subject"] is None and not report["stream"]
-        assert b'package="com.android.intentresolver"' in android_ui_idle(evidence + "-chooser")
+        android_ui_idle(evidence + "-chooser", "com.android.intentresolver")
         capture(evidence + "-chooser")
         paused = state()
         adb("shell", "input", "keyevent", "4")
@@ -188,7 +205,7 @@ def run(apk, output):
             assert returned.get(key) == before.get(key), "Sharing changed " + key
         if screen_name == "renmodpy_records":
             assert returned.get("editable_field") is None, "Sharing reactivated a Records input"
-        assert b'package="org.renmodpy.example"' in android_ui_idle(evidence + "-returned")
+        android_ui_idle(evidence + "-returned", PACKAGE)
         capture(evidence + "-returned")
         return returned
 

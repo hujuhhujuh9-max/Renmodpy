@@ -167,6 +167,13 @@ also exposed the default-input refocus on return to Records. The new native
 next-interaction assertion fails on that revision; Android acceptance now
 also requires the returned Records input to stay inactive. Final acceptance
 is pending after the focus correction.
+The [focus-fix run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38216516268)
+passed both native renderer suites, but stopped at History's UI capture:
+UIAutomator returned without creating its XML file. The retained screenshot
+and Intent show the real chooser was already open with the correct text.
+The harness now retries capture within a 60-second deadline, records each
+command's output, and requires valid XML from the expected foreground package.
+The same-process return and inactive-input assertions remain required.
 
 The APK observer inspects the identical Java Intent dispatched after a real
 tap, records Android main-Looper affinity, and forwards the same request to
