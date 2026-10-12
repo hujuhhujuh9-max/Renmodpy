@@ -293,11 +293,8 @@ def run(apk, output, upgrade_apk=None):
         payload = json.loads(receipt["text"])
         assert payload["type"] == "renmodpy.records" and payload["records"] == before["records"]
         assert receipt["sha256"] == hashlib.sha256(receipt["text"].encode()).hexdigest()
-        android_ui_idle(evidence + "-received", FIXTURE_PACKAGE)
-        capture(evidence + "-received")
-        adb("shell", "input", "keyevent", "4")
-        # Android may launch a chosen receiver in its own task; Back then
-        # returns to the launcher. Reopen the sender through its real activity.
+        # The receiver can occupy its own task or Android can return directly
+        # to the sender. Reopen the sender without pressing Back in either app.
         adb("shell", "am", "start", "-W", "-n", ACTIVITY)
         def sender_resumed():
             activity = adb("shell", "dumpsys", "activity", "activities").stdout.decode()
