@@ -92,6 +92,22 @@ init 900 python:
                 _rm_services.records().delete(temporary)
                 _rm_reload_records(form, "records")
                 assert not form.needs_reload and form.editing_id == identifier
+                transfer = renpy.get_screen_variable("transfer", screen="renmodpy_records")
+                original_picker = _rm_services.pick_text
+                imported_draft = dict(form.values)
+                try:
+                    _rm_services.pick_text = lambda done, **kwargs: done(_rm_transfers.dump_records(
+                        _rm_services.records().snapshot()), None)
+                    _rm_import_records(form, "records", transfer)
+                    assert transfer["preview"]["unchanged"] == 1 and not transfer["busy"]
+                    assert dict(form.values) == imported_draft and form.editing_id == identifier
+                    _rm_apply_import(form, "records", transfer)
+                    assert form.needs_reload and dict(form.values) == imported_draft
+                    assert _rm_services.records().list()[0]["values"]["extra"] == "Keep outside the visible schema"
+                    _rm_reload_records(form, "records")
+                    assert not form.needs_reload and dict(form.values) == imported_draft
+                finally:
+                    _rm_services.pick_text = original_picker
                 # Evaluate the Android-only controls on the real native screen
                 # without changing the host engine's platform or JNI backend.
                 renpy.get_screen("renmodpy_records").scope["renpy"] = _rm_check_types.SimpleNamespace(android=True)
@@ -293,6 +309,7 @@ label renmodpy_check_start:
                 "SDL clipboard Unicode/multiline copy/paste and plain history export",
                 "sharing unavailable on the host preserves Records drafts and the story session",
                 "Android-only Records share controls evaluate and disable input without changing the draft",
+                "backup preview/confirmed import keeps edited drafts and hidden fields and requires reload",
                 "reading settings survive restart and older story load",
                 "populated save browser rendered", "native board rendered",
                 "durable resume exact slot", "named checkpoint create/overwrite/delete",

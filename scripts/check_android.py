@@ -3,6 +3,8 @@
 
 import argparse
 import json
+import hashlib
+import re
 from pathlib import Path
 import shlex
 import subprocess
@@ -12,14 +14,16 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = "org.renmodpy.example"
+FIXTURE_PACKAGE = "org.renmodpy.validation"
+DOCUMENT_PACKAGE = "com.google.android.documentsui"
 STATE = f"/data/user/0/{PACKAGE}/files/renmodpy-probe/state.json"
 SHARE = f"/data/user/0/{PACKAGE}/files/renmodpy-probe/share.json"
 SHARE_ERROR = f"/data/user/0/{PACKAGE}/files/renmodpy-probe/share-error.json"
 ACTIVITY = PACKAGE + "/org.renpy.android.PythonSDLActivity"
 
 
-def adb(*arguments, check=True, timeout=45):
-    return subprocess.run(["adb", *arguments], capture_output=True, check=check, timeout=timeout)
+def adb(*arguments, check=True, timeout=45, data=None):
+    return subprocess.run(["adb", *arguments], input=data, capture_output=True, check=check, timeout=timeout)
 
 
 def run(apk, output):
@@ -161,6 +165,102 @@ def run(apk, output):
             time.sleep(0.4)
         raise RuntimeError("Android view capture did not become ready for " + package)
 
+    def native_tap(label, package, evidence):
+        android_ui_idle(evidence, package)
+        tree = ET.parse(output / (evidence + "-ui.xml"))
+        node = next((node for node in tree.iter("node") if label.casefold() in
+                    (node.get("text", "").casefold(), node.get("content-desc", "").casefold())), None)
+        if node is None:
+            raise RuntimeError("No native Android control: " + label)
+        x1, y1, x2, y2 = map(int, re.findall(r"-?\d+", node.get("bounds", "")))
+        adb("shell", "input", "tap", str((x1 + x2) // 2), str((y1 + y2) // 2))
+
+    def fixture_file(name, data):
+        adb("shell", "run-as", FIXTURE_PACKAGE, "mkdir", "-p", "files/documents")
+        adb("shell", "run-as", FIXTURE_PACKAGE, "sh", "-c",
+            shlex.quote("cat > files/documents/" + name), data=data)
+
+    def fixture_read(name):
+        return adb("exec-out", "run-as", FIXTURE_PACKAGE, "cat", "files/" + name).stdout
+
+    def document(action, evidence, *, filename=None, cancel=False):
+        before = state()
+        tap(action, scroll="up", wait_update=False)
+        wait_device(lambda: b"DocumentsActivity" in adb("shell", "dumpsys", "activity", "activities").stdout,
+                    "Android document picker did not open")
+        android_ui_idle(evidence + "-picker", DOCUMENT_PACKAGE)
+        capture(evidence + "-picker")
+        if cancel:
+            adb("shell", "input", "keyevent", "4")
+        else:
+            native_tap("Show roots", DOCUMENT_PACKAGE, evidence + "-roots-button")
+            native_tap("RenModPy fixtures", DOCUMENT_PACKAGE, evidence + "-roots")
+            native_tap(filename if filename else "Save", DOCUMENT_PACKAGE, evidence + "-files")
+        returned = wait(lambda s: s["boot"] == before["boot"] and "renmodpy_records" in s["screens"]
+                        and not s.get("transfer", {}).get("busy", True), "Document callback did not finish on the live Records screen")
+        assert returned["draft"] == before["draft"] and returned["editing"] == before["editing"]
+        assert returned["history"] == before["history"] and returned["font_size"] == before["font_size"]
+        capture(evidence + "-returned")
+        return returned
+
+    def replace_field(field, text):
+        current = state()
+        if current.get("editable_field") != field:
+            tap("field:" + field, scroll="up")
+        focused = wait(lambda s: s.get("editable_field") == field, "Replacement field did not receive focus")
+        adb("shell", "input", "keyevent", "123")
+        if focused["input_text"]:
+            adb("shell", "input", "keyevent", *(["67"] * len(focused["input_text"])))
+        wait(lambda s: s.get("input_text") == "", "Field did not clear")
+        if text:
+            adb("shell", "input", "text", text.replace(" ", "%s"))
+        return wait(lambda s: s.get("input_text") == text, "Replacement text did not reach the form")
+
+    def service(label, operation, *, expected="passed"):
+        tap(label)
+        result = wait(lambda s: s.get("service_fixture", {}).get("operation") == operation
+                      and s["service_fixture"]["result"] != "pending", "Native service callback did not finish")
+        assert result["service_fixture"]["result"] == expected, result["service_fixture"]
+        assert result["service_fixture"]["owner_thread"]
+        return result
+
+    def file_share(evidence):
+        before = state()
+        sequence = share_report().get("sequence", 0)
+        tap("Share backup", scroll="up", wait_update=False)
+        wait_device(lambda: share_report().get("sequence", 0) > sequence,
+                    "The native file-sharing Intent was not observed")
+        report = share_report()
+        assert report["ui_thread"] and report["stream"] and report["mime"] == "application/json"
+        android_ui_idle(evidence + "-chooser", "com.android.intentresolver")
+        capture(evidence + "-chooser")
+        native_tap("RenModPy test receiver", "com.android.intentresolver", evidence + "-target")
+        def received():
+            result = adb("exec-out", "run-as", FIXTURE_PACKAGE, "cat", "files/received.json", check=False)
+            try:
+                receipt = json.loads(result.stdout)
+            except ValueError:
+                return False
+            (output / (evidence + "-received.json")).write_text(json.dumps(receipt, indent=2, ensure_ascii=False) + "\n")
+            return receipt.get("result") == "passed"
+        wait_device(received, "The offline receiver did not read the attachment")
+        receipt = json.loads(fixture_read("received.json"))
+        assert receipt["scheme"] == "content" and receipt["read_grant"]
+        sender_uid = int(adb("shell", "stat", "-c", "%u", f"/data/user/0/{PACKAGE}").stdout)
+        assert receipt["uid"] != sender_uid
+        payload = json.loads(receipt["text"])
+        assert payload["type"] == "renmodpy.records" and payload["records"] == before["records"]
+        assert receipt["sha256"] == hashlib.sha256(receipt["text"].encode()).hexdigest()
+        capture(evidence + "-received")
+        adb("shell", "input", "keyevent", "4")
+        wait_device(lambda: PACKAGE.encode() in adb("shell", "dumpsys", "activity", "activities").stdout.split(
+            b"topResumedActivity=")[-1].split(b"\n")[0], "The receiver did not resume the main activity")
+        returned = wait(lambda s: "renmodpy_records" in s["screens"] and s["sequence"] > before["sequence"],
+                        "The offline receiver did not return to Records")
+        assert returned["boot"] == before["boot"] and returned["draft"] == before["draft"]
+        assert returned["records"] == before["records"] and returned["editable_field"] is None
+        capture(evidence + "-returned")
+
     def share(name, text, screen_name, evidence, *, scroll=None):
         before = state()
         previous = share_report().get("sequence", 0)
@@ -253,11 +353,30 @@ def run(apk, output):
         adb("shell", "wm", "density", "160")
         adb("logcat", "-c")
         adb("install", "-r", str(apk))
+        adb("install", "-r", str(ROOT / ".renmodpy-build/android-fixtures/fixtures.apk"))
         adb("shell", "pm", "clear", PACKAGE)
         adb("shell", "am", "start", "-W", "-n", ACTIVITY)
         initial = screen("main_menu")
         assert initial["android"], "The APK did not run the Android runtime"
         capture("home")
+        tap("Validation tools")
+        screen("renmodpy_validation_tools")
+        stored = service("Store first fixture", "store-first")
+        service("Read first fixture", "read-first")
+        service("Touch feedback fixture", "haptic")
+        assert stored["worker_events"] and all(event["app_loader"] and not event["ui_thread"] for event in stored["worker_events"])
+        feedback = state()["haptic_events"]
+        assert feedback and all(event["ui_thread"] for event in feedback)
+        private_path = f"/data/user/0/{PACKAGE}/no_backup/renmodpy-secure/" + hashlib.sha256(b"validation.private-note").hexdigest() + ".json"
+        encrypted = adb("exec-out", "cat", private_path).stdout
+        assert b"First public fixture" not in encrypted
+        envelope = json.loads(encrypted)
+        assert envelope["version"] == 1 and set(envelope) == {"version", "iv", "ciphertext"}
+        (output / "secure-storage.json").write_text(json.dumps({"ciphertext_sha256": hashlib.sha256(encrypted).hexdigest(),
+            "plaintext_on_disk": False, "outside_backup": True, "owner_thread": stored["service_fixture"]["owner_thread"]}, indent=2) + "\n")
+        checks.append("Android Keystore private text is encrypted outside backup; worker JNI uses the app loader and callbacks run on the engine owner")
+        checks.append("Native haptic requests run on Android's UI thread and return a boolean without claiming physical vibration")
+        home()
         tap("Start story")
         original = screen("say")
         original_history = original["history"]
@@ -285,6 +404,26 @@ def run(apk, output):
         home()
         tap("Records")
         screen("renmodpy_records")
+        previous_ime = adb("shell", "settings", "get", "secure", "default_input_method").stdout.decode().strip()
+        fixture_ime = FIXTURE_PACKAGE + "/.UnicodeIme"
+        adb("shell", "ime", "enable", fixture_ime)
+        adb("shell", "ime", "set", fixture_ime)
+        tap("field:title", scroll="up")
+        wait(lambda s: s.get("editable_field") == "title", "Unicode test field did not receive focus")
+        wait_device(lambda: adb("exec-out", "run-as", FIXTURE_PACKAGE, "cat", "files/ime.json", check=False).returncode == 0,
+                    "The composition keyboard did not open")
+        ime = json.loads(fixture_read("ime.json"))
+        assert ime["ui_thread"]
+        adb("shell", "input", "tap", str(ime["x"]), str(ime["y"]))
+        composed = wait(lambda s: s.get("input_text") == "café", "Native IME composition did not reach the form")
+        assert composed["records"] == [] and composed["history"] == original_history
+        capture("unicode-ime-composition")
+        adb("shell", "ime", "set", previous_ime)
+        tap("field:title")
+        wait(lambda s: s.get("editable_field") is None, "Composition input did not deactivate")
+        tap("Cancel edit", scroll="up")
+        wait(lambda s: not any(s.get("draft", {}).values()), "Cancelling composition did not clear the unsaved draft")
+        checks.append("A native InputConnection composes and commits café into the actual form; cancelling preserves saved Records and the waiting story")
         enter("title", "Emulator note")
         draft = state()
         assert draft["editable_field"] == "title" and draft["records"] == []
@@ -322,6 +461,72 @@ def run(apk, output):
         assert shared["draft"] == {"title": "Keep draft", "body": ""}
         checks.append("Real Android text choosers receive Unicode/multiline history and saved Records on the UI thread; dismissal preserves the draft, story, preferences and saves")
         checks.append("Native history/record copy and Unicode/multiline paste use the platform clipboard; rejected title paste preserves the draft")
+        cancelled = document("Import backup", "import-cancel", cancel=True)
+        assert cancelled["records"] == shared["records"] and "cancelled" in cancelled["form_message"].lower()
+        exported = document("Export backup", "export-backup")
+        assert "exported" in exported["form_message"].lower()
+        export_text = fixture_read("documents/records.json").decode("utf-8")
+        export_data = json.loads(export_text)
+        assert export_data["records"] == exported["records"]
+        (output / "export-backup.json").write_text(export_text)
+        file_share("file-share")
+        fixture_file("malformed.json", b"not a JSON backup")
+        malformed = document("Import backup", "import-malformed", filename="malformed.json")
+        assert malformed["records"] == shared["records"] and malformed["transfer"]["preview"] is None
+        imported_rows = [{"id": saved_record["id"], "values": {"title": "Imported title", "body": original_history[-1]}},
+                         {"id": "a" * 32, "values": {"title": "Added by backup", "body": "Café Ω", "extra": "Hidden backup field"}}]
+        fixture_file("backup.json", json.dumps({"type": "renmodpy.records", "version": 1,
+                     "records": imported_rows}, ensure_ascii=False).encode())
+        previewed = document("Import backup", "import-preview", filename="backup.json")
+        assert previewed["records"] == shared["records"] and previewed["transfer"]["preview"]["new"] == 1
+        assert previewed["transfer"]["preview"]["updated"] == 1
+        tap("Cancel import", scroll="up")
+        wait(lambda s: s.get("transfer", {}).get("preview") is None, "Cancelling preview did not clear it")
+        document("Import backup", "import-confirm", filename="backup.json")
+        tap("Import these records", scroll="up")
+        imported = wait(lambda s: len(s["records"]) == 2, "Confirmed import did not merge the backup")
+        assert imported["draft"] == {"title": "Keep draft", "body": ""}
+        assert imported["records"][1]["values"]["extra"] == "Hidden backup field"
+        (output / "import-confirmed.json").write_text(json.dumps(imported, indent=2, ensure_ascii=False) + "\n")
+        tap("Delete", occurrence=1, scroll="down")
+        screen("confirm"); tap("No")
+        wait(lambda s: "confirm" not in s["screens"], "Record delete cancellation did not close")
+        assert len(state()["records"]) == 2
+        tap("Delete", occurrence=1, scroll="down")
+        screen("confirm"); tap("Yes")
+        wait(lambda s: len(s["records"]) == 1, "Confirmed record deletion did not remove the imported row")
+        tap("Cancel edit", scroll="up")
+        wait(lambda s: not any(s.get("draft", {}).values()), "Draft cancellation did not clear fields")
+        tap("Edit", scroll="down")
+        wait(lambda s: s.get("editing") == saved_record["id"], "Record editing did not open")
+        replace_field("title", "Discarded edit")
+        tap("field:title"); wait(lambda s: s.get("editable_field") is None, "Input did not deactivate")
+        tap("Cancel edit", scroll="up")
+        wait(lambda s: s.get("editing") is None, "Cancel edit did not close")
+        assert state()["records"][0]["values"]["title"] == "Imported title"
+        tap("Edit", scroll="down")
+        wait(lambda s: s.get("editing") == saved_record["id"], "Record editing did not reopen")
+        replace_field("title", "Emulator note")
+        tap("field:title"); wait(lambda s: s.get("editable_field") is None, "Input did not deactivate")
+        tap("Save changes", scroll="up")
+        wait(lambda s: s["records"][0]["values"] == saved_record["values"], "Record edit did not restore the original fixture")
+        checks.append("Scoped document export/import, cancellation, malformed JSON and confirmed backup merge preserve the draft; another UID reads the granted attachment offline")
+        checks.append("Real Android edit/cancel/save and cancelled/confirmed record deletion retain the intended saved data")
+        home()
+        tap("Validation tools"); screen("renmodpy_validation_tools")
+        service("Store newer fixture", "store-newer")
+        service("Read newer fixture", "read-newer")
+        encrypted_newer = adb("exec-out", "cat", private_path).stdout
+        damaged = json.loads(encrypted_newer)
+        damaged["ciphertext"] = ("A" if damaged["ciphertext"][0] != "A" else "B") + damaged["ciphertext"][1:]
+        damaged_bytes = json.dumps(damaged).encode()
+        adb("shell", "sh", "-c", shlex.quote("cat > " + private_path), data=damaged_bytes)
+        failed_storage = service("Read newer fixture", "read-newer", expected="failed")
+        assert failed_storage["service_fixture"]["error"]
+        assert adb("exec-out", "cat", private_path).stdout == damaged_bytes
+        adb("shell", "sh", "-c", shlex.quote("cat > " + private_path), data=encrypted_newer)
+        service("Read newer fixture", "read-newer")
+        checks.append("Authenticated private storage rejects tampered ciphertext without deleting it or replacing the key")
         home()
         tap("Resume story")
         resumed = screen("say")
@@ -336,6 +541,9 @@ def run(apk, output):
         assert restored["history"] == original_history and len(restored["records"]) == 1
         assert restored["font_size"] == 1.25 and restored["text_cps"] == 0
         capture("restarted-dialogue")
+        home(); tap("Validation tools"); screen("renmodpy_validation_tools")
+        service("Read newer fixture", "read-newer")
+        home(); tap("Resume story"); restored = screen("say")
         checks.append("Force-stop/relaunch and durable Resume preserve story position, private Records and reading preferences")
         # The waiting choice is newer than the explicit Home/quick saves.
         # Exercise native background saving without using the app's Home.
@@ -382,6 +590,9 @@ def run(apk, output):
         assert loaded["clipboard"] == copied_record, "Loading a story rewound the live clipboard"
         assert loaded["records"][0]["values"] == saved_record["values"]
         checks.append("Loading an older Android quick save restores the earlier dialogue/choice state while keeping newer Records and reading preferences")
+        home(); tap("Validation tools"); screen("renmodpy_validation_tools")
+        service("Read newer fixture", "read-newer")
+        home(); tap("Resume story"); loaded = screen("say")
 
         chosen = choose("Share it with Mira")
         chosen_history = chosen["history"]
@@ -426,6 +637,12 @@ def run(apk, output):
         assert replayed["clipboard"] == copied_record and replayed["records"][0]["values"] == saved_record["values"]
         capture("replayed-dialogue")
         checks.append("Replay resets story/history/choice state while preserving Records, reading settings, quick and named checkpoints")
+        home(); tap("Validation tools"); screen("renmodpy_validation_tools")
+        service("Read newer fixture", "read-newer")
+        service("Delete private fixture", "delete")
+        service("Read missing fixture", "read-missing")
+        assert adb("shell", "test", "-f", private_path, check=False).returncode != 0
+        checks.append("Private storage survives process restart, older quick-load and replay; explicit deletion removes the entry and subsequent reads return missing")
 
         home()
         tap("Saved games")

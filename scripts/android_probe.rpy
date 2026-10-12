@@ -16,12 +16,38 @@ init 900 python:
     _rm_android_probe.boot = _rm_android_uuid.uuid4().hex
     _rm_android_probe.sequence = 0
     _rm_android_probe.share_sequence = 0
+    _rm_android_probe.worker_events = []
+    _rm_android_probe.haptic_events = []
     if renpy.android:
         from jnius import autoclass as _rm_android_autoclass
         _rm_android_activity = _rm_android_autoclass("org.renpy.android.PythonSDLActivity").mActivity
         _rm_android_probe.directory = _rm_android_Path(str(_rm_android_activity.getFilesDir().getAbsolutePath())) / "renmodpy-probe"
         from renpy.renmodpy import android_sharing as _rm_android_sharing
         from renpy.renmodpy import android_jni as _rm_android_jni
+        from renpy.renmodpy import android_workers as _rm_android_workers
+        from renpy.renmodpy import android_device as _rm_android_device
+        _rm_android_probe.worker_run = _rm_android_workers.run
+        _rm_android_probe.haptic_perform = _rm_android_device._perform_haptic
+        def _rm_android_worker_run(handler, callback, error_message):
+            def observed():
+                thread = _rm_android_autoclass("java.lang.Thread").currentThread()
+                _rm_android_probe.worker_events.append({
+                    "app_loader": bool(thread.getContextClassLoader().equals(_rm_android_activity.getClassLoader())),
+                    "ui_thread": bool(_rm_android_autoclass("android.os.Looper").getMainLooper().equals(
+                        _rm_android_autoclass("android.os.Looper").myLooper()))})
+                return handler()
+            return _rm_android_probe.worker_run(observed, callback, error_message)
+        _rm_android_workers.run = _rm_android_worker_run
+        # The importing modules bind run_worker during import; observe both
+        # aliases without changing their request/callback behavior.
+        _rm_android_device.run_worker = _rm_android_worker_run
+        def _rm_android_haptic(activity, code):
+            accepted = _rm_android_probe.haptic_perform(activity, code)
+            _rm_android_probe.haptic_events.append({"code": code, "accepted": accepted,
+                "ui_thread": bool(_rm_android_autoclass("android.os.Looper").getMainLooper().equals(
+                    _rm_android_autoclass("android.os.Looper").myLooper()))})
+            return accepted
+        _rm_android_device._perform_haptic = _rm_android_haptic
         from jnius import cast as _rm_android_cast
         _rm_android_probe.launch = _rm_android_sharing._launch
         _rm_android_probe.request_share = _rm_android_sharing.share_text
@@ -80,7 +106,7 @@ init 900 python:
         _rm_android_probe.sequence += 1
         screens = [name for name in ("main_menu", "say", "choice", "confirm", "renmodpy_home",
             "renmodpy_records", "renmodpy_settings", "renmodpy_history", "renmodpy_saves",
-            "renmodpy_tactics") if renpy.get_screen(name)]
+            "renmodpy_tactics", "renmodpy_validation_tools", "renmodpy_example_media") if renpy.get_screen(name)]
         buttons = []
         for focus in renpy.display.focus.focus_list:
             if focus.x is None:
@@ -102,6 +128,10 @@ init 900 python:
             "editable_field": getattr(input_value, "key", "save_name") if editable and input_value else None}
         if renpy.android:
             state["ui_callbacks"] = len(_rm_android_jni._ui_calls)
+            state["worker_events"] = list(_rm_android_probe.worker_events)
+            state["haptic_events"] = list(_rm_android_probe.haptic_events)
+        if hasattr(renpy.store, "_rm_validation"):
+            state["service_fixture"] = dict(_rm_validation.state)
         # Validation-only observation of the real SDL/platform clipboard.
         # Production screens read it only when the user requests Paste.
         try:
@@ -113,6 +143,7 @@ init 900 python:
             state["draft"] = dict(form.values)
             state["editing"] = form.editing_id
             state["form_message"] = form.message
+            state["transfer"] = dict(renpy.get_screen_variable("transfer", screen="renmodpy_records"))
         temporary = _rm_android_probe.directory / "state.tmp"
         temporary.write_text(_rm_android_json.dumps(state, ensure_ascii=False))
         _rm_android_os.replace(temporary, _rm_android_probe.directory / "state.json")

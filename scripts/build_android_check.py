@@ -27,6 +27,7 @@ def main():
     shutil.copytree(sdk / "renmodpy-example", project, ignore=shutil.ignore_patterns(
         "*.rpyc", "saves", "log.txt", "traceback.txt", "errors.txt"))
     shutil.copy2(ROOT / "scripts/android_probe.rpy", project / "game/android_probe.rpy")
+    shutil.copy2(ROOT / "scripts/android_services_probe.rpy", project / "game/android_services_probe.rpy")
     (sdk / "rapt/sdk.txt").write_text(str(android_sdk) + "\n")
     # This key belongs only to the disposable CI example, never to a release.
     subprocess.run(["keytool", "-genkeypair", "-keystore", str(project / "android.keystore"),

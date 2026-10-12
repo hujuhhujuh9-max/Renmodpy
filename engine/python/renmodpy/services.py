@@ -4,11 +4,13 @@ import hashlib
 import json
 import os
 import re
+import sys
 import threading
 import uuid
 from pathlib import Path
 
 from .records import RecordStore
+from .transfers import MAX_DOCUMENT_BYTES
 
 
 RESUME_SLOT = "renmodpy-resume"
@@ -26,6 +28,140 @@ class ClipboardError(RuntimeError):
 
 class ShareError(RuntimeError):
     """The Android text chooser could not be requested."""
+
+
+class FileError(RuntimeError):
+    """A scoped Android file operation could not be requested."""
+
+
+class StorageError(RuntimeError):
+    """Android private encrypted storage could not be requested."""
+
+
+def _secure(operation, key, callback, value=""):
+    engine = owner()
+    if (not isinstance(key, str) or not 1 <= len(key) <= 128 or not key.strip()
+            or not key.isprintable() or not callable(callback)):
+        raise ValueError("Use a callback and a printable private-storage key of 1–128 characters.")
+    if not isinstance(value, str) or len(value.encode("utf-8")) > 65536:
+        raise ValueError("Use private text no larger than 64 KiB.")
+    if not engine.android:
+        raise StorageError("Private encrypted storage is available on Android.")
+    try:
+        from . import android_device
+        android_device.secure(operation, key, value, callback)
+    except StorageError:
+        raise
+    except Exception as error:
+        raise StorageError("Private storage could not be requested.") from error
+
+
+def secure_set(key, value, callback):
+    """Store text with Android Keystore; callback(True, None) means committed."""
+    _secure("set", key, callback, value)
+
+
+def secure_get(key, callback):
+    """Read private text; callback(None, None) means absent. Never log secrets."""
+    _secure("get", key, callback)
+
+
+def secure_delete(key, callback):
+    """Delete private text; the result reports whether an entry existed."""
+    _secure("delete", key, callback)
+
+
+def haptic(kind="selection", callback=None):
+    """Request native touch feedback; accepted does not prove physical vibration."""
+    engine = owner()
+    if kind not in ("selection", "confirm") or (callback is not None and not callable(callback)):
+        raise ValueError("Choose selection or confirm feedback and an optional callback.")
+    if not engine.android:
+        raise RuntimeError("Touch feedback is available on Android.")
+    from . import android_device
+    android_device.haptic(kind, callback)
+
+
+def _filename(filename):
+    if (not isinstance(filename, str) or not filename.strip() or len(filename) > 128
+            or not filename.isprintable() or any(char in filename for char in "/\\")
+            or filename in (".", "..")):
+        raise ValueError("Use a filename of 1–128 printable characters without directory separators.")
+
+
+def _mime(mime):
+    if not isinstance(mime, str) or re.fullmatch(r"(?:\*/\*|[A-Za-z0-9!#$&^_.+\-]+/(?:[A-Za-z0-9!#$&^_.+\-]+|\*))", mime) is None:
+        raise ValueError("Use a valid MIME type.")
+
+
+def pick_text(callback, *, mime="text/plain", max_bytes=MAX_DOCUMENT_BYTES):
+    """Pick UTF-8 text; callback(text, error) runs on the owning thread.
+
+    (None, None) means cancelled. Errors are plain messages, not native handles.
+    """
+    engine = owner()
+    if not callable(callback) or type(max_bytes) is not int or not 1 <= max_bytes <= MAX_DOCUMENT_BYTES:
+        raise ValueError("Use a callback and a byte limit between 1 and 8 MiB.")
+    _mime(mime)
+    if not engine.android:
+        raise FileError("File picking is available on Android.")
+    try:
+        from . import android_documents
+        android_documents.request("read", callback, mime, limit=max_bytes)
+    except FileError:
+        raise
+    except Exception as error:
+        raise FileError("The Android file picker could not be opened.") from error
+
+
+def export_text(filename, text, callback, *, mime="text/plain"):
+    """Choose a destination; callback(True, None) means written, None means cancelled."""
+    engine = owner()
+    _filename(filename)
+    _mime(mime)
+    if not callable(callback) or not isinstance(text, str) or len(text.encode("utf-8")) > MAX_DOCUMENT_BYTES:
+        raise ValueError("Use a callback and UTF-8 text no larger than 8 MiB.")
+    if not engine.android:
+        raise FileError("File export is available on Android.")
+    try:
+        from . import android_documents
+        android_documents.request("write", callback, mime, filename=filename, text=text)
+    except FileError:
+        raise
+    except Exception as error:
+        raise FileError("The Android file picker could not be opened.") from error
+
+
+def poll_services():
+    engine = owner()
+    documents = sys.modules.get(__package__ + ".android_documents")
+    if engine.android and documents is not None:
+        documents.poll()
+
+
+def file_request_pending():
+    owner()
+    documents = sys.modules.get(__package__ + ".android_documents")
+    return documents is not None and documents._pending is not None
+
+
+def share_file(filename, data, *, mime="application/octet-stream", subject=""):
+    """Share bytes through a temporary, read-granted content URI, never file://."""
+    engine = owner()
+    _filename(filename)
+    _mime(mime)
+    if not isinstance(data, bytes) or not data or len(data) > MAX_DOCUMENT_BYTES:
+        raise ValueError("Choose non-empty file bytes no larger than 8 MiB.")
+    if not isinstance(subject, str) or "\0" in subject:
+        raise ValueError("Use a text subject without null characters.")
+    if not engine.android:
+        raise ShareError("File sharing is available on Android.")
+    try:
+        from . import android_sharing
+        android_sharing.share_file(filename, data, mime, subject, on_error=lambda error:
+            engine.invoke_in_main_thread(engine.notify, "Android file sharing could not be opened."))
+    except Exception as error:
+        raise ShareError("Android file sharing could not be opened.") from error
 
 
 def share_text(text, *, subject=""):

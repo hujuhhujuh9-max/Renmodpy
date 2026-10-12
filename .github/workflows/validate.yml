@@ -87,6 +87,7 @@ jobs:
         run: |
           python3 build_sdk.py
           python3 scripts/build_android_check.py --sdk .renmodpy-build/renmodpy-sdk
+          python3 scripts/build_android_fixtures.py
       - name: Prepare the Android 15 emulator
         run: |
           sdk_tools_bin="$ANDROID_HOME/cmdline-tools/latest/bin"
@@ -110,6 +111,8 @@ jobs:
             .renmodpy-build/android-build/build.log
             .renmodpy-build/android-build/build.json
             .renmodpy-build/android-check/
+            .renmodpy-build/android-fixtures/build.log
+            .renmodpy-build/android-fixtures/build.json
           if-no-files-found: warn
           retention-days: 14
       - name: Upload disposable validation APK

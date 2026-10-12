@@ -107,3 +107,11 @@ intent is recorded in [vision.md](vision.md).
 ## 22 — Continued work, 2026-10-12
 
 > Work
+
+## 23 — Progress question, 2026-10-12
+
+> How far are we now to being done?
+
+## 24 — Completion work, 2026-10-12
+
+> Okay, work on those things and yeah, work on those things

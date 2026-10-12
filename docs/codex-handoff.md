@@ -1,5 +1,18 @@
 # Codex handoff
 
+## Active completion work, 2026-10-12
+
+The user authorized the remaining Android coverage, useful SDK services,
+media fixtures and fresh-project/packaging work (prompt 24). Scoped backup
+import/export, attachment sharing, AES-GCM Android Keystore storage and native
+haptic APIs are implemented on the review branch. Local validation passes
+79 host tests and 28 native engine checks, including confirmed backup imports
+that preserve drafts and hidden fields. Android acceptance for these additions
+is pending; the receipts below describe the earlier verified milestone.
+The emulator fixture now has an offline document provider, a receiver with a
+separate UID and an actual composing IME. None is part of the engine/product.
+Media, wider screen profiles and packaging/upgrade validation remain active.
+
 RenModPy's native app/story foundation and text sharing pass Android emulator acceptance.
 Read [vision.md](vision.md), [user-prompts.md](user-prompts.md) and `AGENTS.md`
 before continuing. The product remains one continuous Android-only modified

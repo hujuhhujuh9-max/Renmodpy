@@ -63,6 +63,11 @@ def assemble(inputs, output, *, with_android=True):
                 subprocess.run(["patch", "--batch", "--forward", "-p1"],
                                input=inputs.branch_file("renpy-rapt", patch["path"], patch["sha256"]),
                                cwd=sdk / "rapt", check=True)
+            for patch in sorted((ROOT / "engine/android/patches").glob("*.patch")):
+                subprocess.run(["patch", "--batch", "--forward", "-p1"],
+                               input=patch.read_bytes(), cwd=sdk / "rapt", check=True)
+            shutil.copytree(ROOT / "engine/android/java",
+                            sdk / "rapt/prototype/renpyandroid/src/main/java", dirs_exist_ok=True)
         notices = sdk / "renmodpy-notices"
         notices.mkdir()
         shutil.copy2(ROOT / "LICENSE", notices / "PROJECT-LICENSE.txt")

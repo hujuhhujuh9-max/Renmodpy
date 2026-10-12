@@ -87,3 +87,16 @@ The Flutter-specific FragmentActivity patch is not part of this first import.
 Original project notices remain in LICENSE. Ren'Py, SDL, Python, and other
 third-party code retain their existing notices in the assembled SDK. No
 third-party material is relicensed by this project.
+
+The document picker, attachment export, haptic and private-storage APIs extend
+the same donor JNI helpers at `0fc79f001b2177a9a31dea31fd781b4cc298a510`.
+The implementation uses Android's Storage Access Framework, existing Ren'Py
+FileProvider, Android Keystore AES-GCM and decor-view haptic feedback. The new
+Java helpers in `engine/android/java` perform only bounded document IO and
+authenticated storage; Ren'Py remains the sole Python/runtime owner.
+`engine/android/patches/document-results.patch` publishes activity results in
+order, permits scoped cache attachments and removes the unused broad external
+storage permission. It applies after the locked donor null-result patch.
+Offline receiver, document-provider and composing-keyboard sources under
+`scripts/fixtures` are original disposable test code and are excluded from the
+engine and ordinary application projects.

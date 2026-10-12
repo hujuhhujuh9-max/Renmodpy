@@ -121,3 +121,20 @@ class RecordStore:
             rows.remove(row)
 
         return self._mutate(remove, expected_revision)
+
+    def merge(self, rows, *, expected_revision):
+        """Merge a confirmed backup atomically; omitted records/fields remain."""
+        from .transfers import validate_rows
+        rows = validate_rows(rows)
+
+        def merge(current):
+            indexed = {row["id"]: row for row in current}
+            for imported in rows:
+                if imported["id"] in indexed:
+                    existing = indexed[imported["id"]]
+                    existing["values"] = validate_values(dict(existing["values"], **imported["values"]))
+                else:
+                    if len(current) >= 1000:
+                        raise RecordsError("This collection already has 1,000 records.")
+                    current.append(copy.deepcopy(imported))
+        return self._mutate(merge, expected_revision)

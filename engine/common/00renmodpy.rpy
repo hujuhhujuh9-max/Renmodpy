@@ -4,6 +4,7 @@
 init -800 python:
     from renpy import renmodpy
     from renpy.renmodpy import services as _rm_services
+    from renpy.renmodpy import transfers as _rm_transfers
     from renpy.renmodpy.board import TacticsDisplayable as _rm_TacticsDisplayable
     import datetime as _rm_datetime
 
@@ -17,7 +18,11 @@ init -800 python:
             return {"revision": 0, "records": []}, str(error)
 
     def _rm_submit_record(form, collection, revision):
-        form.submit(_rm_services.records(collection), revision)
+        if form.submit(_rm_services.records(collection), revision) and renpy.android:
+            try:
+                _rm_services.haptic("confirm")
+            except RuntimeError:
+                pass
 
     def _rm_edit_record(form, snapshot, identifier):
         try:
@@ -69,6 +74,90 @@ init -800 python:
             _rm_services.share_text(renpy.filter_text_tags(text or "", allow=set()))
         except (ValueError, _rm_services.ShareError) as error:
             renpy.notify(str(error))
+
+    def _rm_transfer_current(transfer):
+        screen = renpy.get_screen("renmodpy_records")
+        return screen is not None and screen.scope.get("transfer") is transfer
+
+    def _rm_preview_records(form, collection, transfer):
+        snapshot = _rm_services.records(collection).snapshot()
+        current = {row["id"]: row["values"] for row in snapshot["records"]}
+        for index, row in enumerate(transfer["rows"], 1):
+            values = dict(current.get(row["id"], {}), **row["values"])
+            for field in form.fields:
+                value = values.get(field.name, "")
+                if (field.required and not value.strip()) or len(value) > field.max_length:
+                    raise ValueError("Backup record %d has an invalid %s." % (index, field.label))
+        transfer["preview"] = _rm_transfers.preview_records(transfer["rows"], snapshot)
+
+    def _rm_import_records(form, collection, transfer):
+        def finished(text, error):
+            if not _rm_transfer_current(transfer):
+                return
+            transfer["busy"] = False
+            if error or text is None:
+                form.message = (error or "Import cancelled.") + " Your draft is kept."
+            else:
+                try:
+                    transfer["rows"] = _rm_transfers.load_records(text)
+                    _rm_preview_records(form, collection, transfer)
+                    form.message = "Review the backup before importing. Your draft is kept."
+                except (ValueError, renmodpy.RecordsError) as failed:
+                    transfer["rows"], transfer["preview"] = None, None
+                    form.message = str(failed) + " Your records and draft are kept."
+            renpy.restart_interaction()
+        try:
+            transfer["busy"] = True
+            transfer["rows"], transfer["preview"] = None, None
+            _rm_services.pick_text(finished, mime="application/json")
+        except (ValueError, _rm_services.FileError) as error:
+            transfer["busy"] = False
+            form.message = str(error) + " Your draft is kept."
+
+    def _rm_export_records(form, collection, transfer):
+        def finished(written, error):
+            if not _rm_transfer_current(transfer):
+                return
+            transfer["busy"] = False
+            form.message = (error or ("Backup exported." if written else "Export cancelled.")) + " Your draft is kept."
+            renpy.restart_interaction()
+        try:
+            text = _rm_transfers.dump_records(_rm_services.records(collection).snapshot())
+            transfer["busy"] = True
+            _rm_services.export_text(collection + ".json", text, finished, mime="application/json")
+        except (ValueError, renmodpy.RecordsError, _rm_services.FileError) as error:
+            transfer["busy"] = False
+            form.message = str(error) + " Your draft is kept."
+
+    def _rm_share_backup(form, collection):
+        try:
+            text = _rm_transfers.dump_records(_rm_services.records(collection).snapshot())
+            _rm_services.share_file(collection + ".json", text.encode("utf-8"), mime="application/json")
+            form.message = "Choose an app to share the backup. Your draft is kept."
+        except (ValueError, renmodpy.RecordsError, _rm_services.ShareError) as error:
+            form.message = str(error) + " Your draft is kept."
+
+    def _rm_apply_import(form, collection, transfer):
+        try:
+            _rm_services.records(collection).merge(transfer["rows"], expected_revision=transfer["preview"]["revision"])
+            transfer["rows"], transfer["preview"] = None, None
+            if form.editing_id is not None:
+                form.needs_reload = True
+            form.message = "Backup imported. Your draft is kept." + (" Reload records before saving." if form.needs_reload else "")
+        except (ValueError, renmodpy.RecordsError) as error:
+            form.message = str(error) + " Preview the backup again. Your draft is kept."
+
+    def _rm_refresh_preview(form, collection, transfer):
+        try:
+            _rm_preview_records(form, collection, transfer)
+            form.message = "Backup preview refreshed. Your draft is kept."
+        except (ValueError, renmodpy.RecordsError) as error:
+            form.message = str(error) + " Your records and draft are kept."
+
+    def _rm_transfer_recovery(form, transfer):
+        if transfer["busy"] and not _rm_services.file_request_pending():
+            transfer["busy"] = False
+            form.message = "The file request ended. Choose a file again. Your draft is kept."
 
     def _rm_delete_record(identifier, revision, form, collection):
         try:
@@ -137,6 +226,8 @@ init -800 python:
 
 init 800 python:
     _rm_services.bind(renpy)
+    if _rm_services.poll_services not in config.periodic_callbacks:
+        config.periodic_callbacks.append(_rm_services.poll_services)
 
 default _renmodpy_board = None
 default renmodpy_scene = "Story"
@@ -327,8 +418,10 @@ screen renmodpy_records(collection="records", title="Records", fields=renmodpy.D
     tag menu
     style_prefix "renmodpy"
     default form = renmodpy.RecordDraft(fields)
+    default transfer = {"busy": False, "rows": None, "preview": None}
     default input_values = {field.name: DictInputValue(form.values, field.name, default=(index == 0)) for index, field in enumerate(form.fields)}
     $ snapshot, read_error = _rm_record_snapshot(collection)
+    $ _rm_transfer_recovery(form, transfer)
     add Solid("#101d27")
     viewport:
         id "records_list"
@@ -347,6 +440,41 @@ screen renmodpy_records(collection="records", title="Records", fields=renmodpy.D
                 text _rm_literal(title) style "renmodpy_heading" xsize 440 layout "greedy"
                 textbutton "Home" action ShowMenu("renmodpy_home")
             text "Application data stays current when a story is loaded." style "renmodpy_caption"
+            if renpy.android:
+                hbox:
+                    spacing 12
+                    style_prefix "renmodpy_clipboard"
+                    textbutton "Import backup":
+                        sensitive not transfer["busy"]
+                        action [value.Disable() for value in input_values.values()] + [Function(_rm_import_records, form, collection, transfer)]
+                    textbutton "Export backup":
+                        sensitive not read_error and not transfer["busy"]
+                        action [value.Disable() for value in input_values.values()] + [Function(_rm_export_records, form, collection, transfer)]
+                textbutton "Share backup":
+                    style_prefix "renmodpy_clipboard"
+                    sensitive not read_error and not transfer["busy"]
+                    action [value.Disable() for value in input_values.values()] + [Function(_rm_share_backup, form, collection)]
+                text "Backups include all saved fields. Drafts stay on this screen." style "renmodpy_caption"
+                if transfer["busy"]:
+                    text "Waiting for the file request…" style "renmodpy_caption"
+            if transfer["preview"] is not None:
+                frame:
+                    xfill True
+                    vbox:
+                        spacing 12
+                        text "Backup preview" style "renmodpy_text" bold True
+                        text ("%d new, %d updated, %d unchanged." % (transfer["preview"]["new"], transfer["preview"]["updated"], transfer["preview"]["unchanged"])) style "renmodpy_caption"
+                        text "Other records and omitted fields are kept." style "renmodpy_caption"
+                        hbox:
+                            spacing 12
+                            style_prefix "renmodpy_clipboard"
+                            textbutton "Import these records":
+                                sensitive not transfer["busy"]
+                                action Function(_rm_apply_import, form, collection, transfer)
+                            textbutton "Preview again" action Function(_rm_refresh_preview, form, collection, transfer)
+                        textbutton "Cancel import":
+                            style_prefix "renmodpy_clipboard"
+                            action [SetDict(transfer, "rows", None), SetDict(transfer, "preview", None)]
             for field in form.fields:
                 hbox:
                     spacing 12

@@ -1,0 +1,47 @@
+--- a/prototype/renpyandroid/src/main/java/org/renpy/android/PythonSDLActivity.java
++++ b/prototype/renpyandroid/src/main/java/org/renpy/android/PythonSDLActivity.java
+@@ -623,9 +623,9 @@
+     // mActivity.startActivity(Intent, requestCode), then poll the fields on
+     // this object until the response comes back.
+ 
+-    public int mActivityResultRequestCode = -1;
+-    public int mActivityResultResultCode = -1;
+-    public Intent mActivityResultResultData = null;
++    public volatile int mActivityResultRequestCode = -1;
++    public volatile int mActivityResultResultCode = -1;
++    public volatile Intent mActivityResultResultData = null;
+ 
+     @Override
+     protected void onActivityResult(int requestCode, int resultCode, Intent resultData) {
+@@ -633,11 +633,12 @@
+             return;
+         }
+ 
+         Log.v("python", "onActivityResult(" + requestCode + ", " + resultCode + ", " + String.valueOf(resultData) + ")");
+ 
+-        mActivityResultRequestCode = requestCode;
+         mActivityResultResultCode = resultCode;
+         mActivityResultResultData = resultData;
++        // Publish readiness after the result; cancellation has no Intent.
++        mActivityResultRequestCode = requestCode;
+ 
+         super.onActivityResult(requestCode, resultCode, resultData);
+     }
+--- a/prototype/renpyandroid/src/main/res/xml/file_paths.xml
++++ b/prototype/renpyandroid/src/main/res/xml/file_paths.xml
+@@ -1,4 +1,5 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <paths xmlns:android="http://schemas.android.com/apk/res/android">
+     <external-path name="files" path="/" />
++    <cache-path name="renmodpy_share" path="renmodpy-share/" />
+ </paths>
+--- a/templates/app-AndroidManifest.xml
++++ b/templates/app-AndroidManifest.xml
+@@ -51,7 +51,6 @@
+   <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+ 
+   <uses-permission android:name="android.permission.WAKE_LOCK" />
+-  <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+ 
+   {% if (config.store in ("play", "all" )) %}
+   <uses-permission android:name="com.android.vending.BILLING"/>
