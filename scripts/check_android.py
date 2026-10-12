@@ -475,11 +475,20 @@ def run(apk, output, upgrade_apk=None):
             (output / "ime-ready.json").write_text(json.dumps(position) + "\n")
             return position.get("x", 0) > 0 and position.get("y", 0) > 0
         wait_device(ime_ready, "The composition keyboard did not open")
+        before_keyboard = state()["sequence"]
+        wait(lambda s: s["surface_geometry"]["sequence"] > before_keyboard
+             and 0 < s["physical_size"][1] - s["surface_geometry"]["visible_bounds"][3] <= 200,
+             "The composing keyboard did not finish showing")
+        android_ui_idle("unicode-ime-ready", PACKAGE)
+        capture("unicode-ime-ready")
         ime = json.loads((output / "ime-ready.json").read_text())
         assert ime["ui_thread"]
         adb("shell", "input", "tap", str(ime["x"]), str(ime["y"]))
         composed = wait(lambda s: s.get("input_text") == "café", "Native IME composition did not reach the form")
         assert composed["records"] == [] and composed["history"] == original_history
+        composition = json.loads(fixture_read("composition.json"))
+        assert all(composition.values()), composition
+        (output / "ime-composition.json").write_text(json.dumps(composition, indent=2) + "\n")
         capture("unicode-ime-composition")
         adb("shell", "ime", "set", previous_ime)
         tap("field:title")
