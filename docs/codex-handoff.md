@@ -121,6 +121,42 @@ signing key and read-only observer; the build receipt marks `release: false`.
 
 ## Blockers resolved during continuation
 
+The latest "Work" continuation adds Android text sharing for saved Records
+and history. `services.share_text` opens the native text chooser; its callback
+runs on Android's UI thread through the retained JNI helper without blocking
+SDL. Synchronous failures raise `ShareError`, and asynchronous launch errors
+queue a notification on Ren'Py's owning thread. The request has no send-result
+claim. Exports contain only visible saved fields or plain dialogue, and never
+submit or replace an unsaved Records draft.
+
+The [first sharing run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38211152159)
+passed the host suites but could not open the Android chooser. A
+[diagnostic run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38212410093)
+retained the native `JavaException`: `Intent.createChooser` had no overload
+matching the Python string supplied for its Java `CharSequence` argument.
+The backend now constructs/casts a Java string for that title. The callback
+also uses positional arguments so Pyjnius's native `__cinit__(*args)` accepts
+construction before the Python subclass initializer. Regression tests model
+both JNI argument contracts alongside callback lifetime/error handling.
+
+The [title-fix run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38213201543)
+opened the chooser on the Android UI thread, but its text extra was a Java
+`char[]`: Pyjnius selected that `putExtra` overload for a Python string.
+The backend now passes explicit Java `String` objects for text and subject.
+The [payload-fix run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38214007868)
+then verified the exact Unicode/multiline history payload and same-session
+return. Creating a saved Record exposed an Android-only screen expression
+using `input.Disable()` where `input` was Ren'Py's function. The screen now
+uses the existing `DisableAllInputValues` action. A native regression evaluates
+that same Android-only control, reproduced the exception before the fix, and
+checks that sharing disables the keyboard while preserving the edited draft.
+Full Android sharing acceptance is still pending after that correction.
+
+The APK observer inspects the identical Java Intent dispatched after a real
+tap, records Android main-Looper affinity, and forwards the same request to
+the platform. The harness opens and dismisses the chooser; it does not select
+a receiving app. Prior verified lifecycle/clipboard receipts remain unchanged.
+
 The later 2026-10-12 continuation focuses on Android background recovery.
 The native lifecycle regression reproduced a pending `_reload-1` deletion:
 a fresh process opened Home, skipped background saving because it was in the

@@ -92,9 +92,26 @@ init 900 python:
                 _rm_services.records().delete(temporary)
                 _rm_reload_records(form, "records")
                 assert not form.needs_reload and form.editing_id == identifier
-                _rm_check_probe.mode = "records-edit"
+                # Evaluate the Android-only controls on the real native screen
+                # without changing the host engine's platform or JNI backend.
+                renpy.get_screen("renmodpy_records").scope["renpy"] = _rm_check_types.SimpleNamespace(android=True)
+                _rm_check_probe.mode = "records-android"
                 return None
             return True
+        if mode == "records-android":
+            form = renpy.get_screen_variable("form", screen="renmodpy_records")
+            inputs = renpy.get_screen_variable("input_values", screen="renmodpy_records")
+            identifier = form.editing_id
+            draft = dict(form.values)
+            renpy.run(inputs["body"].Enable())
+            button = renpy.get_displayable("renmodpy_records", "record_share_" + identifier, base=True)
+            renpy.run(button.action)
+            assert not renpy.get_editable_input_value()[1], "Sharing left the form keyboard active"
+            assert "available on Android" in form.message
+            assert dict(form.values) == draft and form.editing_id == identifier and not form.needs_reload
+            del renpy.get_screen("renmodpy_records").scope["renpy"]
+            _rm_check_probe.mode = "records-edit"
+            return None
         if mode == "records-edit":
             form = renpy.get_screen_variable("form", screen="renmodpy_records")
             _rm_check_capture(mode)
@@ -269,6 +286,7 @@ label renmodpy_check_start:
                 "record edit/reload keeps drafts and invisible fields", "multiline record input",
                 "SDL clipboard Unicode/multiline copy/paste and plain history export",
                 "sharing unavailable on the host preserves Records drafts and the story session",
+                "Android-only Records share controls evaluate and disable input without changing the draft",
                 "reading settings survive restart and older story load",
                 "populated save browser rendered", "native board rendered",
                 "durable resume exact slot", "named checkpoint create/overwrite/delete",

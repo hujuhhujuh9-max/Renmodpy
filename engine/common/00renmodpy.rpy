@@ -403,7 +403,9 @@ screen renmodpy_records(collection="records", title="Records", fields=renmodpy.D
                                 style_prefix "renmodpy_clipboard"
                                 textbutton "Copy record" action Function(_rm_copy_record, record["values"], form.fields, form)
                                 if renpy.android:
-                                    textbutton "Share record" action [input.Disable(), Function(_rm_share_record, record["values"], form.fields, form)]
+                                    textbutton "Share record":
+                                        id ("record_share_" + record["id"])
+                                        action [DisableAllInputValues(), Function(_rm_share_record, record["values"], form.fields, form)]
                 if not snapshot["records"] and not read_error:
                     text "Your saved records will appear here." style "renmodpy_caption"
     key "game_menu" action ShowMenu("renmodpy_home")
