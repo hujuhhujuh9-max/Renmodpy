@@ -161,6 +161,7 @@ init 900 python:
         if renpy.android:
             state["surface_geometry"] = dict(_rm_android_probe.geometry)
             state["device_orientation"] = int(_rm_android_activity.getResources().getConfiguration().orientation)
+            state["display_density"] = int(_rm_android_activity.getResources().getConfiguration().densityDpi)
             state["ui_callbacks"] = len(_rm_android_jni._ui_calls)
             state["worker_events"] = list(_rm_android_probe.worker_events)
             state["worker_errors"] = list(_rm_android_probe.worker_errors)

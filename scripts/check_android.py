@@ -796,8 +796,10 @@ def run(apk, output, upgrade_apk=None):
         for width, height, density in ((480, 800, 160), (1080, 2400, 320), (720, 1280, 160)):
             adb("shell", "wm", "size", f"{width}x{height}")
             adb("shell", "wm", "density", str(density))
-            resized = wait(lambda s: s["physical_size"] == [width, height] and "renmodpy_records" in s["screens"],
+            resized = wait(lambda s: s["physical_size"] == [width, height] and s.get("display_density") == density
+                           and "renmodpy_records" in s["screens"],
                            "Screen-size change did not retain the live Records screen")
+            assert resized["boot"] == profile_state["boot"], "Display changes replaced the live interpreter"
             assert resized["draft"] == profile_state["draft"] and resized["records"] == profile_state["records"]
             assert resized["history"] == profile_state["history"] and resized["font_size"] == 1.25
             capture(f"profile-{width}-{height}")
@@ -806,9 +808,11 @@ def run(apk, output, upgrade_apk=None):
             tap("field:title")
             wait(lambda s: s.get("editable_field") is None, "Scaled form control did not deactivate")
             profiles.append({"size": [width, height], "density": density, "draft_preserved": True, "input_tapped": True})
+        rotation_sequence = state()["sequence"]
         adb("shell", "settings", "put", "system", "accelerometer_rotation", "0")
         adb("shell", "settings", "put", "system", "user_rotation", "1")
-        rotated = wait(lambda s: s.get("device_orientation") == 1 and "renmodpy_records" in s["screens"],
+        rotated = wait(lambda s: s["sequence"] > rotation_sequence and s.get("device_orientation") == 1
+                       and "renmodpy_records" in s["screens"],
                        "The portrait application did not retain its declared orientation")
         assert rotated["draft"] == profile_state["draft"] and rotated["records"] == profile_state["records"]
         capture("portrait-after-rotation-request")

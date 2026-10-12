@@ -1,0 +1,5 @@
+--- a/templates/app-AndroidManifest.xml
++++ b/templates/app-AndroidManifest.xml
+@@ -18,1 +18,1 @@
+-        android:configChanges="layoutDirection|locale|orientation|uiMode|screenLayout|screenSize|smallestScreenSize|keyboard|keyboardHidden|navigation"
++        android:configChanges="layoutDirection|locale|orientation|uiMode|screenLayout|screenSize|smallestScreenSize|keyboard|keyboardHidden|navigation|density"
