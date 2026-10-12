@@ -118,6 +118,24 @@ def run(apk, output, upgrade_apk=None):
                  "Android observer did not update after the tap")
 
     def tap(name, *, occurrence=0, scroll=None, wait_update=True):
+        signature, stable_since = None, None
+        def settled(current):
+            nonlocal signature, stable_since
+            geometry = current.get("surface_geometry", {})
+            bounds = geometry.get("visible_bounds")
+            if bounds is None or geometry.get("sequence", 0) < current["sequence"] - 2:
+                return False
+            # A newly focused default field can precede the IME's first
+            # frame by seconds. Require that frame before trusting its origin.
+            if current.get("editable_field") is not None and bounds[3] >= current["physical_size"][1]:
+                signature, stable_since = None, None
+                return False
+            current_signature = (tuple(geometry["origin"]), tuple(bounds), current.get("editable_field"))
+            if current_signature != signature:
+                signature, stable_since = current_signature, time.monotonic()
+                return False
+            return time.monotonic() - stable_since >= 0.6
+        wait(settled, "The native input window did not settle before tapping " + name)
         def matches(current):
             bounds = current.get("surface_geometry", {}).get("visible_bounds", [0, 0, *current.get("physical_size", [720, 1280])])
             result = []
