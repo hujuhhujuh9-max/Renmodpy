@@ -103,6 +103,19 @@ def check(sdk, output):
                     raise RuntimeError("Recompiled project upgrade did not restore the older first-dialogue save.")
         receipt["checks"].append("ordinary startup and fresh-process Home Resume/Quick load restore the first dialogue")
         receipt["checks"].append("a recompiled version update preserves statement identities and loads the previous release's first-dialogue save")
+        with tempfile.TemporaryDirectory(prefix="replay-resume-", dir=output) as directory:
+            replay_project = Path(directory)
+            shutil.copytree(sdk / "renmodpy-example", replay_project, dirs_exist_ok=True,
+                            ignore=IGNORE_PROJECT)
+            shutil.copy2(ROOT / "scripts/startup_probe.rpy", replay_project / "game/startup_probe.rpy")
+            for phase in ("replay-save", "replay-resume", "replay-quick"):
+                (output / ("startup-" + phase + "-passed.json")).unlink(missing_ok=True)
+                run("startup-" + phase, project_path=replay_project,
+                    RENMODPY_STARTUP_PHASE=phase, RENPY_SKIP_MAIN_MENU="",
+                    RENMODPY_CHECK_SAVEDIR=str(replay_project / "saves"))
+                if phase != "replay-save" and json.loads((output / ("startup-" + phase + "-passed.json")).read_text()).get("result") != "passed":
+                    raise RuntimeError("Cold load of the first dialogue saved after replay did not finish: " + phase)
+        receipt["checks"].append("first-dialogue Resume and Quick load after replay survive fresh processes without rewinding Records or preferences")
         # Exercise the same save/cleanup policy used by Android's SDL suspend
         # handler. Actual OS app switching and process death run on Android.
         with tempfile.TemporaryDirectory(prefix="lifecycle-", dir=output) as directory:

@@ -231,6 +231,7 @@ init 800 python:
 
 default _renmodpy_board = None
 default renmodpy_scene = "Story"
+default _renmodpy_restart_target = "start"
 default persistent.renmodpy_last_result = None
 
 init -700 python:
@@ -657,8 +658,10 @@ screen renmodpy_tactics(session):
     key "game_menu" action [Function(_rm_return_home), ShowMenu("renmodpy_home")]
 
 label renmodpy_restart:
+    $ _renmodpy_restart_target = _restart[2]
+    $ renpy.game.log.block_load(purge=True)
     $ _rm_services.begin_story()
-    jump expression _restart[2]
+    jump expression _renmodpy_restart_target
 
 label renmodpy_tactics:
     $ _renmodpy_board = renmodpy.BoardSession()
