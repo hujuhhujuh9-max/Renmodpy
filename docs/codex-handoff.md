@@ -174,6 +174,12 @@ and Intent show the real chooser was already open with the correct text.
 The harness now retries capture within a 60-second deadline, records each
 command's output, and requires valid XML from the expected foreground package.
 The same-process return and inactive-input assertions remain required.
+The [capture-retry run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38217325359)
+passed History sharing, view capture and foreground return, then exposed a
+redundant form-focus tap in the harness before typing the retained draft.
+The generic observer tick could precede the first toggle; a second tap then
+disabled the field. Draft setup now focuses once, scrolls if needed, and waits
+for the specific editable field before typing.
 
 The APK observer inspects the identical Java Intent dispatched after a real
 tap, records Android main-Looper affinity, and forwards the same request to

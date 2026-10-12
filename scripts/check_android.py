@@ -209,9 +209,9 @@ def run(apk, output):
         capture(evidence + "-returned")
         return returned
 
-    def enter(field, text):
+    def enter(field, text, *, scroll=None):
         if state().get("editable_field") != field:
-            tap("field:" + field)
+            tap("field:" + field, scroll=scroll)
             wait(lambda s: s.get("editable_field") == field, "Field did not receive focus")
         adb("shell", "input", "text", text.replace(" ", "%s"))
         wait(lambda s: s.get("input_text") == text, "Android text input did not reach the form")
@@ -315,8 +315,7 @@ def run(apk, output):
         capture("records")
         # Keep an unsaved form draft while sharing the saved row. Its export
         # must use saved values, and Back from Android must keep that draft.
-        tap("field:title", scroll="up")
-        enter("title", "Keep draft")
+        enter("title", "Keep draft", scroll="up")
         tap("field:title")
         wait(lambda s: s.get("editable_field") is None, "Record input stayed active")
         shared = share("Share record", copied_record, "renmodpy_records", "record-share", scroll="down")
