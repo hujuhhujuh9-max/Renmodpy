@@ -38,16 +38,7 @@ init 900 python:
         except (ValueError, RuntimeError) as error:
             _rm_validation.state = {"operation": operation, "result": "failed", "error": str(error)}
 
-    config.overlay_screens.append("renmodpy_validation_entry")
-
-screen renmodpy_validation_entry():
-    zorder 50
-    if renpy.get_screen("renmodpy_home") or renpy.get_screen("main_menu"):
-        textbutton "Validation tools":
-            style_prefix "renmodpy_clipboard"
-            xpos 36
-            ypos 1190
-            action ShowMenu("renmodpy_validation_tools")
+    renmodpy_home_links += (("Validation tools", "renmodpy_validation_tools"),)
 
 screen renmodpy_validation_tools():
     tag menu

@@ -8,6 +8,8 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+from media_evidence import inspect_frames
+from create_project import create_project
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -104,6 +106,17 @@ def check(sdk, output):
             if lifecycle.get("result") != "passed":
                 raise RuntimeError("Native background recovery did not finish its assertions.")
             receipt["checks"].extend(lifecycle["checks"])
+        with tempfile.TemporaryDirectory(prefix="media-", dir=output) as directory:
+            media_project = Path(directory)
+            shutil.copytree(sdk / "renmodpy-example", media_project, dirs_exist_ok=True, ignore=IGNORE_PROJECT)
+            shutil.copy2(ROOT / "scripts/native_media_probe.rpy", media_project / "game/native_media_probe.rpy")
+            (output / "media-passed.json").unlink(missing_ok=True)
+            run("media", project_path=media_project)
+            media = json.loads((output / "media-passed.json").read_text())
+            assert media["result"] == "passed"
+            media["visible_frames"] = inspect_frames(output / ("media-%d.png" % index) for index in range(6))
+            (output / "media-passed.json").write_text(json.dumps(media, indent=2) + "\n")
+        receipt["checks"].append("native audio playback advances, video renders both decoded colors, ATL visibly moves and media channels stop on exit")
         for screen in ("home", "records", "records-edit", "records-saved", "saves", "dialogue",
                        "story-home", "history", "settings", "saved-catalog", "replay-confirm",
                        "tactics", "reloaded-tactics"):
@@ -114,7 +127,9 @@ def check(sdk, output):
         with tempfile.TemporaryDirectory(prefix="android-", dir=output) as package_directory:
             package_root = Path(package_directory)
             package_project = package_root / "project"
-            shutil.copytree(sdk / "renmodpy-example", package_project, ignore=IGNORE_PROJECT)
+            create_project(sdk, package_project, "Fresh Native Story", "org.renmodpy.freshstory")
+            run("fresh-project-compile", ["compile"], project_path=package_project)
+            run("fresh-project-lint", ["lint"], project_path=package_project)
             run("android-distribution", ["distribute", str(package_project), "--package", "android",
                 "--dest", str(package_root / "distribution"), "--no-update"],
                 project_path=sdk / "launcher")
@@ -141,6 +156,7 @@ def check(sdk, output):
                 "orientation": android["orientation"], "permissions": android["permissions"],
                 "apk_built": False}
         receipt["checks"].append("added engine modules/screens present in Android distribution")
+        receipt["checks"].append("new project creation compiles, lints and packages with its own identity and without validation observers")
         (output / "passed.json").write_text(json.dumps(receipt, indent=2) + "\n")
     print(f"Native receipt and screenshots: {output}")
 

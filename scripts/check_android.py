@@ -6,6 +6,7 @@ import json
 import hashlib
 import re
 from pathlib import Path
+from media_evidence import inspect_frames
 import shlex
 import subprocess
 import time
@@ -26,7 +27,7 @@ def adb(*arguments, check=True, timeout=45, data=None):
     return subprocess.run(["adb", *arguments], input=data, capture_output=True, check=check, timeout=timeout)
 
 
-def run(apk, output):
+def run(apk, output, upgrade_apk=None):
     output.mkdir(parents=True, exist_ok=True)
     (output / "passed.json").unlink(missing_ok=True)
     latest = {}
@@ -377,6 +378,27 @@ def run(apk, output):
         checks.append("Android Keystore private text is encrypted outside backup; worker JNI uses the app loader and callbacks run on the engine owner")
         checks.append("Native haptic requests run on Android's UI thread and return a boolean without claiming physical vibration")
         home()
+        tap("Media room"); screen("renmodpy_example_media")
+        wait(lambda s: s.get("media", {}).get("video_texture") and s["media"].get("audio_position") is not None,
+             "Native Android audio/video playback did not start")
+        media_positions = []
+        for index in range(6):
+            time.sleep(0.35)
+            media_positions.append(state()["media"]["audio_position"])
+            capture("media-%d" % index)
+        assert all(position is not None for position in media_positions)
+        assert len(set(round(position, 2) for position in media_positions)) > 1
+        visible_frames = inspect_frames(output / ("media-%d.png" % index) for index in range(6))
+        tap("Stop tone")
+        wait(lambda s: s.get("media_playing", {}).get("example_tone") is None, "Stop tone did not stop audio")
+        tap("Play tone")
+        wait(lambda s: s.get("media", {}).get("audio_position") is not None, "Play tone did not restart audio")
+        home()
+        wait(lambda s: all(value is None for value in s["media_playing"].values()), "Leaving media kept a channel playing")
+        (output / "media.json").write_text(json.dumps({"audio_positions": media_positions,
+            "visible_frames": visible_frames, "channels_stop_on_exit": True,
+            "physical_audio_verified": False}, indent=2) + "\n")
+        checks.append("Android native audio playback advances, video visibly decodes both colors and ATL moves; stop/restart and menu exit control playback")
         tap("Start story")
         original = screen("say")
         original_history = original["history"]
@@ -639,10 +661,6 @@ def run(apk, output):
         checks.append("Replay resets story/history/choice state while preserving Records, reading settings, quick and named checkpoints")
         home(); tap("Validation tools"); screen("renmodpy_validation_tools")
         service("Read newer fixture", "read-newer")
-        service("Delete private fixture", "delete")
-        service("Read missing fixture", "read-missing")
-        assert adb("shell", "test", "-f", private_path, check=False).returncode != 0
-        checks.append("Private storage survives process restart, older quick-load and replay; explicit deletion removes the entry and subsequent reads return missing")
 
         home()
         tap("Saved games")
@@ -659,6 +677,61 @@ def run(apk, output):
         assert deleted["quick"] and len(deleted["records"]) == 1
         capture("checkpoint-deleted")
         checks.append("Cancelling deletion retains the checkpoint; confirming deletes only the named checkpoint")
+
+        home()
+        before_upgrade = state()
+        if upgrade_apk is not None:
+            adb("install", "-r", str(upgrade_apk), timeout=180)
+            adb("shell", "am", "start", "-W", "-n", ACTIVITY)
+            upgraded = wait(lambda s: s["boot"] != before_upgrade["boot"] and "main_menu" in s["screens"]
+                            and s.get("app_version") == "0.1.1", "Same-key APK upgrade did not start the new version")
+            for key in ("records", "font_size", "text_cps", "quick", "saves"):
+                assert upgraded[key] == before_upgrade[key], "APK upgrade changed " + key
+            tap("Validation tools"); screen("renmodpy_validation_tools")
+            service("Read newer fixture", "read-newer")
+            assert adb("exec-out", "cat", private_path).stdout == encrypted_newer
+            home(); tap("Resume story"); upgraded_story = screen("say")
+            assert upgraded_story["history"] == original_history
+            capture("same-key-upgraded-story")
+            checks.append("A signed same-key APK upgrade starts the new version while keeping Records, preferences, quick saves, story Resume and the encrypted Keystore entry")
+        home(); tap("Validation tools"); screen("renmodpy_validation_tools")
+        service("Read newer fixture", "read-newer")
+        service("Delete private fixture", "delete")
+        service("Read missing fixture", "read-missing")
+        assert adb("shell", "test", "-f", private_path, check=False).returncode != 0
+        checks.append("Private storage survives process restart, older quick-load and replay; explicit deletion removes the entry and subsequent reads return missing")
+
+        home(); tap("Records"); screen("renmodpy_records")
+        enter("title", "Profile draft", scroll="up")
+        tap("field:title")
+        wait(lambda s: s.get("editable_field") is None, "Profile input did not deactivate")
+        profile_state = state()
+        profiles = []
+        for width, height, density in ((480, 800, 160), (1080, 2400, 320), (720, 1280, 160)):
+            adb("shell", "wm", "size", f"{width}x{height}")
+            adb("shell", "wm", "density", str(density))
+            resized = wait(lambda s: s["physical_size"] == [width, height] and "renmodpy_records" in s["screens"],
+                           "Screen-size change did not retain the live Records screen")
+            assert resized["draft"] == profile_state["draft"] and resized["records"] == profile_state["records"]
+            assert resized["history"] == profile_state["history"] and resized["font_size"] == 1.25
+            capture(f"profile-{width}-{height}")
+            tap("field:title", scroll="up")
+            wait(lambda s: s.get("editable_field") == "title", "Scaled form control did not receive focus")
+            tap("field:title")
+            wait(lambda s: s.get("editable_field") is None, "Scaled form control did not deactivate")
+            profiles.append({"size": [width, height], "density": density, "draft_preserved": True, "input_tapped": True})
+        adb("shell", "settings", "put", "system", "accelerometer_rotation", "0")
+        adb("shell", "settings", "put", "system", "user_rotation", "1")
+        rotated = wait(lambda s: s.get("device_orientation") == 1 and "renmodpy_records" in s["screens"],
+                       "The portrait application did not retain its declared orientation")
+        assert rotated["draft"] == profile_state["draft"] and rotated["records"] == profile_state["records"]
+        capture("portrait-after-rotation-request")
+        adb("shell", "settings", "put", "system", "user_rotation", "0")
+        (output / "screen-profiles.json").write_text(json.dumps({"profiles": profiles,
+            "rotation_requested": "landscape", "application_orientation": "portrait", "live_state_preserved": True}, indent=2) + "\n")
+        tap("Cancel edit", scroll="up")
+        wait(lambda s: not any(s.get("draft", {}).values()), "Profile draft did not cancel")
+        checks.append("Compact and tall emulator sizes/densities retain the live draft, saved data and reading settings with tappable inputs; a landscape request respects the portrait app")
 
         receipt = {"result": "passed", "platform": "Android emulator", "engine": loaded["engine"],
             "api": adb("shell", "getprop", "ro.build.version.sdk").stdout.decode().strip(),
@@ -684,7 +757,7 @@ def main():
     parser.add_argument("--output", type=Path, default=ROOT / ".renmodpy-build/android-check")
     args = parser.parse_args()
     build = json.loads((args.build / "build.json").read_text())
-    run(Path(build["apk"]), args.output)
+    run(Path(build["apk"]), args.output, Path(build["upgrade_apk"]) if build.get("upgrade_apk") else None)
 
 
 if __name__ == "__main__":

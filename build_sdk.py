@@ -28,6 +28,7 @@ def source_inventory():
                     and path.name not in ("log.txt", "traceback.txt", "errors.txt")):
                 files[path.relative_to(ROOT).as_posix()] = file_hash(path)
     files["sdk-lock.json"] = file_hash(ROOT / "sdk-lock.json")
+    files["scripts/create_project.py"] = file_hash(ROOT / "scripts/create_project.py")
     return files
 
 
@@ -57,6 +58,7 @@ def assemble(inputs, output, *, with_android=True):
         shutil.copytree(ROOT / "examples/native-app", sdk / "renmodpy-example",
                         ignore=shutil.ignore_patterns("__pycache__", "*.rpyc", "saves",
                                                       "log.txt", "traceback.txt", "errors.txt"))
+        shutil.copy2(ROOT / "scripts/create_project.py", sdk / "create_project.py")
         if with_android:
             shutil.copytree(inputs.sdk_root("renpy-rapt"), sdk / "rapt", symlinks=True)
             for patch in inputs.components["renpy-rapt"].get("patches", []):

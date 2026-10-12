@@ -278,6 +278,8 @@ init -700:
         thumb Solid("#35626a")
         unscrollable "hide"
 
+define renmodpy_home_links = ()
+
 screen renmodpy_home(story_label="start"):
     tag menu
     style_prefix "renmodpy"
@@ -322,6 +324,8 @@ screen renmodpy_home(story_label="start"):
             textbutton "Saved games" action ShowMenu("renmodpy_saves") xfill True
             textbutton "Story history" action ShowMenu("renmodpy_history") xfill True
             textbutton "Reading settings" action ShowMenu("renmodpy_settings") xfill True
+            for caption, menu_screen in renmodpy_home_links:
+                textbutton caption action ShowMenu(menu_screen) xfill True
             if not main_menu:
                 textbutton "Replay story":
                     xfill True

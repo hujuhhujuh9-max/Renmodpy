@@ -117,6 +117,7 @@ init 900 python:
         input_value, editable = renpy.get_editable_input_value()
         state = {"boot": _rm_android_probe.boot, "sequence": _rm_android_probe.sequence, "android": renpy.android,
             "engine": renpy.version_string, "screens": screens, "buttons": buttons,
+            "app_version": config.version,
             "physical_size": renpy.get_physical_size(), "virtual_size": [config.screen_width, config.screen_height],
             "recovery_file": _rm_android_os.path.join(config.savedir, "_reload-1" + renpy.savegame_suffix),
             "main_menu": main_menu, "history": [entry.what for entry in _history_list],
@@ -127,11 +128,17 @@ init 900 python:
             "input_text": input_value.get_text() if editable and input_value else None,
             "editable_field": getattr(input_value, "key", "save_name") if editable and input_value else None}
         if renpy.android:
+            state["device_orientation"] = int(_rm_android_activity.getResources().getConfiguration().orientation)
             state["ui_callbacks"] = len(_rm_android_jni._ui_calls)
             state["worker_events"] = list(_rm_android_probe.worker_events)
             state["haptic_events"] = list(_rm_android_probe.haptic_events)
         if hasattr(renpy.store, "_rm_validation"):
             state["service_fixture"] = dict(_rm_validation.state)
+        if "renmodpy_example_media" in screens:
+            texture, fresh = renpy.display.video.get_movie_texture("example_video")
+            state["media"] = {"audio_position": renpy.music.get_pos("example_tone"),
+                "video_position": renpy.music.get_pos("example_video"), "video_texture": texture is not None}
+        state["media_playing"] = {channel: renpy.music.get_playing(channel) for channel in ("example_tone", "example_video")}
         # Validation-only observation of the real SDL/platform clipboard.
         # Production screens read it only when the user requests Paste.
         try:

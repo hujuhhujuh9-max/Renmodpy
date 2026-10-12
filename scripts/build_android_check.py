@@ -8,6 +8,10 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import re
+import time
+import zipfile
+from create_project import create_project
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,8 +28,7 @@ def main():
         raise RuntimeError("Install Android SDK platform 36 before building.")
     output.mkdir(parents=True, exist_ok=True)
     project = output / "project"
-    shutil.copytree(sdk / "renmodpy-example", project, ignore=shutil.ignore_patterns(
-        "*.rpyc", "saves", "log.txt", "traceback.txt", "errors.txt"))
+    create_project(sdk, project, "RenModPy Native Example", "org.renmodpy.example")
     shutil.copy2(ROOT / "scripts/android_probe.rpy", project / "game/android_probe.rpy")
     shutil.copy2(ROOT / "scripts/android_services_probe.rpy", project / "game/android_services_probe.rpy")
     (sdk / "rapt/sdk.txt").write_text(str(android_sdk) + "\n")
@@ -37,20 +40,57 @@ def main():
     env = dict(os.environ, SDL_VIDEODRIVER="dummy", SDL_AUDIODRIVER="dummy", RENPY_RENDERER="sw",
         RENMODPY_ANDROID_PROBE_DIRECTORY=str(output / "host-observer"))
     env["LD_LIBRARY_PATH"] = str(sdk / "lib/py3-linux-x86_64") + ":" + env.get("LD_LIBRARY_PATH", "")
-    with (output / "build.log").open("w") as log:
-        result = subprocess.run([str(sdk / "renpy.sh"), str(sdk / "launcher"), "android_build",
-            str(project), "--destination", str(output / "apks")], env=env, stdout=log,
-            stderr=subprocess.STDOUT, timeout=900)
-    apks = list((output / "apks").glob("*.apk"))
-    if result.returncode or len(apks) != 1:
-        print((output / "build.log").read_text(), flush=True)
-        raise RuntimeError("RAPT did not produce one validation APK.")
+    def build(source, destination, *, bundle=False):
+        with (output / "build.log").open("a") as log:
+            result = subprocess.run([str(sdk / "renpy.sh"), str(sdk / "launcher"), "android_build",
+                str(source), "--destination", str(destination), *(["--bundle"] if bundle else [])],
+                env=env, stdout=log, stderr=subprocess.STDOUT, timeout=900)
+        artifacts = list(destination.glob("*.aab" if bundle else "*.apk"))
+        if result.returncode or len(artifacts) != 1:
+            print((output / "build.log").read_text(), flush=True)
+            raise RuntimeError("RAPT did not produce one signed Android artifact.")
+        return artifacts[0]
+
+    apk = build(project, output / "apks")
+    upgrade = output / "upgrade-project"
+    shutil.copytree(project, upgrade, ignore=shutil.ignore_patterns("*.rpyc", "saves", "log.txt", "errors.txt", "traceback.txt"))
+    configuration = json.loads((upgrade / ".android.json").read_text())
+    configuration.update(version="0.1.1", numeric_version=int(time.time()) + 1)
+    (upgrade / ".android.json").write_text(json.dumps(configuration, indent=2) + "\n")
+    script = upgrade / "game/script.rpy"
+    script.write_text(script.read_text().replace('define config.version = "0.1.0"', 'define config.version = "0.1.1"'))
+    upgrade_apk = build(upgrade, output / "upgrades")
+    clean_project = create_project(sdk, output / "fresh-project", "Fresh RenModPy Story", "org.renmodpy.packaging")
+    shutil.copy2(project / "android.keystore", clean_project / "android.keystore")
+    shutil.copy2(project / "bundle.keystore", clean_project / "bundle.keystore")
+    aab = build(clean_project, output / "bundles", bundle=True)
+    android_tools = android_sdk / "build-tools/36.0.0"
+    def apk_certificate(path):
+        result = subprocess.run([str(android_tools / "apksigner"), "verify", "--print-certs", str(path)],
+                                capture_output=True, text=True, check=True)
+        return re.search(r"certificate SHA-256 digest: ([0-9a-f]+)", result.stdout).group(1)
+    certificate = apk_certificate(apk)
+    assert apk_certificate(upgrade_apk) == certificate
+    verified = subprocess.run(["jarsigner", "-verify", str(aab)], capture_output=True, text=True, check=True)
+    assert "jar verified." in verified.stdout
+    bundle_cert = subprocess.run(["keytool", "-printcert", "-jarfile", str(aab)], capture_output=True, text=True, check=True)
+    assert re.search(r"SHA256: ([0-9A-F:]+)", bundle_cert.stdout).group(1).replace(":", "").lower() == certificate
+    with zipfile.ZipFile(aab) as archive:
+        names = archive.namelist()
+        assert "base/manifest/AndroidManifest.xml" in names and "base/dex/classes.dex" in names
+        assert any(name.startswith("base/lib/arm64-v8a/") for name in names)
+        assert any(name.startswith("base/lib/x86_64/") for name in names)
+    assert not list((clean_project / "game").glob("*probe*"))
     subprocess.run([str(sdk / "rapt/project/gradlew"), "--stop"], check=False)
-    apk = apks[0]
     with apk.open("rb") as stream:
         checksum = hashlib.file_digest(stream, "sha256").hexdigest()
     (output / "build.json").write_text(json.dumps({"apk": str(apk), "package": "org.renmodpy.example",
         "sha256": checksum, "validation_fixture": True,
+        "upgrade_apk": str(upgrade_apk), "upgrade_sha256": hashlib.sha256(upgrade_apk.read_bytes()).hexdigest(),
+        "aab": str(aab), "aab_sha256": hashlib.sha256(aab.read_bytes()).hexdigest(),
+        "signer_sha256": certificate, "same_key_upgrade": True,
+        "fresh_project_package": "org.renmodpy.packaging", "fresh_project_has_observers": False,
+        "aab_signed": True, "aab_abis": ["arm64-v8a", "x86_64"],
         "release": False}, indent=2) + "\n")
     print(f"Android validation APK: {apk}", flush=True)
 

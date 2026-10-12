@@ -33,6 +33,7 @@ jobs:
           python-version: '3.12'
       - name: Install native validation dependencies
         run: |
+          python3 -m pip install Pillow==12.3.0
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y git-lfs patch xvfb libegl1 libgl1-mesa-dri libsdl2-2.0-0
       - name: Assemble pinned engine and RAPT
@@ -60,7 +61,7 @@ jobs:
   android:
     name: Android APK and emulator checks
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 40
     env:
       ANDROID_USER_HOME: ${{ github.workspace }}/.renmodpy-build/android-user
       ANDROID_AVD_HOME: ${{ github.workspace }}/.renmodpy-build/android-user/avd
@@ -79,6 +80,7 @@ jobs:
           log-accepted-android-sdk-licenses: false
       - name: Install Android build dependencies
         run: |
+          python3 -m pip install Pillow==12.3.0
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y git-lfs patch libegl1 libgl1-mesa-dri libsdl2-2.0-0
           test -e /dev/kvm
@@ -121,6 +123,8 @@ jobs:
           name: android-validation-apk
           path: |
             .renmodpy-build/android-build/apks/*.apk
+            .renmodpy-build/android-build/upgrades/*.apk
+            .renmodpy-build/android-build/bundles/*.aab
             .renmodpy-build/android-build/build.json
           if-no-files-found: error
           retention-days: 14
