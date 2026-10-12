@@ -186,6 +186,8 @@ def run(apk, output):
                         "Dismissing the share chooser did not restore the live app screen")
         for key in ("history", "note_result", "records", "saves", "quick", "font_size", "text_cps", "draft", "editing"):
             assert returned.get(key) == before.get(key), "Sharing changed " + key
+        if screen_name == "renmodpy_records":
+            assert returned.get("editable_field") is None, "Sharing reactivated a Records input"
         assert b'package="org.renmodpy.example"' in android_ui_idle(evidence + "-returned")
         capture(evidence + "-returned")
         return returned

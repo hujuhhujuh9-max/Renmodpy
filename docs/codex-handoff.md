@@ -147,10 +147,11 @@ The [payload-fix run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/3
 then verified the exact Unicode/multiline history payload. Creating a saved
 Record exposed an Android-only screen expression
 using `input.Disable()` where `input` was Ren'Py's function. The screen now
-uses the existing `DisableAllInputValues` action. A native regression evaluates
-that same Android-only control, reproduced the exception before the fix, and
-checks that sharing disables the keyboard while preserving the edited draft.
-Full Android sharing acceptance is still pending after that correction.
+disables the actual form input values. A native regression evaluates that same
+Android-only control and reproduced the exception before the fix. It also
+checks the next interaction, when Ren'Py's `DisableAllInputValues` would
+otherwise reactivate the default field. Disabling each value preserves the
+inactive input and edited draft across that interaction.
 Screenshot review also found that the resumed-activity dump could precede
 the chooser's first frame, and the return check could read a pre-suspend
 observer tick. The harness now waits for the real Android view hierarchy to
@@ -159,6 +160,13 @@ requires a newer same-process observer tick. CI disables system animations
 and retains both view hierarchies and activity dumps with the screenshots.
 Run `38215041919` was cancelled before Android acceptance because this
 harness correction superseded it.
+The [following run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38215361349)
+passed all 61 Python, 27 checks per native renderer and 11 Android checks.
+Its screenshots confirmed both real text choosers and draft retention, but
+also exposed the default-input refocus on return to Records. The new native
+next-interaction assertion fails on that revision; Android acceptance now
+also requires the returned Records input to stay inactive. Final acceptance
+is pending after the focus correction.
 
 The APK observer inspects the identical Java Intent dispatched after a real
 tap, records Android main-Looper affinity, and forwards the same request to

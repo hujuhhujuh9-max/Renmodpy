@@ -102,13 +102,19 @@ init 900 python:
             form = renpy.get_screen_variable("form", screen="renmodpy_records")
             inputs = renpy.get_screen_variable("input_values", screen="renmodpy_records")
             identifier = form.editing_id
-            draft = dict(form.values)
+            _rm_check_probe.sharing_draft = dict(form.values)
+            _rm_check_probe.sharing_identifier = identifier
             renpy.run(inputs["body"].Enable())
             button = renpy.get_displayable("renmodpy_records", "record_share_" + identifier, base=True)
             renpy.run(button.action)
-            assert not renpy.get_editable_input_value()[1], "Sharing left the form keyboard active"
+            _rm_check_probe.mode = "records-android-return"
+            return None
+        if mode == "records-android-return":
+            form = renpy.get_screen_variable("form", screen="renmodpy_records")
+            assert not renpy.get_editable_input_value()[1], "Sharing reactivated the default form input"
             assert "available on Android" in form.message
-            assert dict(form.values) == draft and form.editing_id == identifier and not form.needs_reload
+            assert dict(form.values) == _rm_check_probe.sharing_draft
+            assert form.editing_id == _rm_check_probe.sharing_identifier and not form.needs_reload
             del renpy.get_screen("renmodpy_records").scope["renpy"]
             _rm_check_probe.mode = "records-edit"
             return None

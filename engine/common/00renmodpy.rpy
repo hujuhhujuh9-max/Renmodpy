@@ -405,7 +405,7 @@ screen renmodpy_records(collection="records", title="Records", fields=renmodpy.D
                                 if renpy.android:
                                     textbutton "Share record":
                                         id ("record_share_" + record["id"])
-                                        action [DisableAllInputValues(), Function(_rm_share_record, record["values"], form.fields, form)]
+                                        action [value.Disable() for value in input_values.values()] + [Function(_rm_share_record, record["values"], form.fields, form)]
                 if not snapshot["records"] and not read_error:
                     text "Your saved records will appear here." style "renmodpy_caption"
     key "game_menu" action ShowMenu("renmodpy_home")
