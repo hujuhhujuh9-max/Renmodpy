@@ -11,6 +11,7 @@ import shlex
 import subprocess
 import time
 import xml.etree.ElementTree as ET
+from PIL import Image
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -177,6 +178,7 @@ def run(apk, output, upgrade_apk=None):
         return {}
 
     def android_ui_idle(evidence, package):
+        packages = (package,) if isinstance(package, str) else package
         # The resumed-activity dump can precede the chooser's first frame.
         # UIAutomator waits for the actual Android view hierarchy to be idle.
         path = "/sdcard/renmodpy-ui.xml"
@@ -188,7 +190,7 @@ def run(apk, output, upgrade_apk=None):
             hierarchy = adb("exec-out", "cat", path, check=False).stdout
             try:
                 tree = ET.fromstring(hierarchy)
-                ready = any(node.get("package") == package for node in tree.iter("node"))
+                ready = any(node.get("package") in packages for node in tree.iter("node"))
             except ET.ParseError:
                 ready = False
             # UIAutomator can exit 0 after its idle timeout without a file;
@@ -200,7 +202,7 @@ def run(apk, output, upgrade_apk=None):
                 (output / (evidence + "-ui.xml")).write_bytes(hierarchy)
                 return
             time.sleep(0.4)
-        raise RuntimeError("Android view capture did not become ready for " + package)
+        raise RuntimeError("Android view capture did not become ready for " + repr(packages))
 
     def native_tap(label, package, evidence):
         android_ui_idle(evidence, package)
@@ -293,21 +295,28 @@ def run(apk, output, upgrade_apk=None):
         payload = json.loads(receipt["text"])
         assert payload["type"] == "renmodpy.records" and payload["records"] == before["records"]
         assert receipt["sha256"] == hashlib.sha256(receipt["text"].encode()).hexdigest()
-        # The receiver can occupy its own task or Android can return directly
-        # to the sender. Reopen the sender without pressing Back in either app.
-        adb("shell", "am", "start", "-W", "-n", ACTIVITY)
+        # Wait for the recipient transition to settle. Starting the sender
+        # again while it is already resumed causes another pause/resume pair.
+        android_ui_idle(evidence + "-delivery", (PACKAGE, FIXTURE_PACKAGE))
         def sender_resumed():
             activity = adb("shell", "dumpsys", "activity", "activities").stdout.decode()
             (output / (evidence + "-returned-activity.txt")).write_text(activity)
             return any(ACTIVITY in line and
                        ("topResumedActivity" in line or "mResumedActivity" in line)
                        for line in activity.splitlines())
+        if not sender_resumed():
+            adb("shell", "am", "start", "-W", "-n", ACTIVITY)
         wait_device(sender_resumed, "Android did not foreground the main activity after receiving the attachment")
         returned = wait(lambda s: "renmodpy_records" in s["screens"] and s["sequence"] > before["sequence"],
                         "The offline receiver did not return to Records")
         assert returned["boot"] == before["boot"] and returned["draft"] == before["draft"]
         assert returned["records"] == before["records"] and returned["editable_field"] is None
-        capture(evidence + "-returned")
+        android_ui_idle(evidence + "-returned", PACKAGE)
+        def redrawn():
+            capture(evidence + "-returned")
+            with Image.open(output / (evidence + "-returned.png")) as frame:
+                return any(high > low for low, high in frame.convert("RGB").getextrema())
+        wait_device(redrawn, "The foreground Records screen did not redraw after attachment delivery")
 
     def share(name, text, screen_name, evidence, *, scroll=None):
         before = state()
