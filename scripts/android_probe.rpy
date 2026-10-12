@@ -110,7 +110,10 @@ init 900 python:
                     view = _rm_android_autoclass("org.libsdl.app.SDLActivity").getContentView()
                     position = [0, 0]
                     view.getLocationOnScreen(position)
-                    _rm_android_probe.geometry = {"origin": position, "sequence": sequence}
+                    frame = _rm_android_autoclass("android.graphics.Rect")()
+                    view.getWindowVisibleDisplayFrame(frame)
+                    _rm_android_probe.geometry = {"origin": position, "sequence": sequence,
+                        "visible_bounds": [int(frame.left), int(frame.top), int(frame.right), int(frame.bottom)]}
                 finally:
                     _rm_android_probe.geometry_pending = False
             def failed(error):

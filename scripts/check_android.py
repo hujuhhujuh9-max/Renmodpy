@@ -119,15 +119,26 @@ def run(apk, output, upgrade_apk=None):
 
     def tap(name, *, occurrence=0, scroll=None, wait_update=True):
         def matches(current):
-            return [button for button in current.get("buttons", []) if button["name"] == name]
+            bounds = current.get("surface_geometry", {}).get("visible_bounds", [0, 0, *current.get("physical_size", [720, 1280])])
+            result = []
+            for button in current.get("buttons", []):
+                if button["name"] != name:
+                    continue
+                x, y, width, height = button["rect"]
+                px, py = map(int, physical_point(x + width / 2, y + height / 2, current))
+                if bounds[0] <= px < bounds[2] and bounds[1] <= py < bounds[3]:
+                    result.append(button)
+            return result
         if scroll:
             for _ in range(5):
                 current = state()
                 if len(matches(current)) > occurrence:
                     break
-                start, end = (1000, 300) if scroll == "down" else (300, 1000)
-                adb("shell", "input", "swipe", *physical_point(660, start, current),
-                    *physical_point(660, end, current), "400")
+                left, top, right, bottom = current["surface_geometry"]["visible_bounds"]
+                x = round(left + (right - left) * 0.9)
+                start, end = (0.8, 0.2) if scroll == "down" else (0.2, 0.8)
+                adb("shell", "input", "swipe", str(x), str(round(top + (bottom - top) * start)),
+                    str(x), str(round(top + (bottom - top) * end)), "400")
                 wait(lambda s: s["sequence"] > current["sequence"], "Scroll observer did not update")
         current = wait(lambda s: len(matches(s)) > occurrence, "No tappable control: " + name)
         sequence = current["sequence"]
@@ -325,6 +336,10 @@ def run(apk, output, upgrade_apk=None):
         wait(lambda s: s.get("input_text") == text, "Android text input did not reach the form")
 
     def home():
+        field = state().get("editable_field")
+        if field is not None:
+            tap("field:" + field)
+            wait(lambda s: s.get("editable_field") is None, "Home did not dismiss the active input")
         tap("Home", scroll="up")
         screen("renmodpy_home")
 
