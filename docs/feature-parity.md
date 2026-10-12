@@ -25,27 +25,31 @@ and [capability assessment](https://github.com/hujuhhujuh9-max/SDK-/blob/0fc79f0
 | Custom fields and independent collections | `FormField`, `RecordDraft` and named private JSON collections; Python tests and native multiline input probe |
 | Custom screens and activities | Ordinary Ren'Py screens, labels, Python and displayables; tactics demonstrates versioned custom save state |
 | Clipboard copy/read and native form paste | Android history/record copy and Unicode/multiline Note paste pass; rejected Title paste keeps the draft; clipboard and pasted Records remain current after old-save load/replay |
+| Plain-text sharing | Real Android choosers receive exact Unicode/multiline history and saved Records on the UI thread; Back keeps the draft/story/settings/saves and leaves input inactive; receiving-app delivery is unverified |
 | Audio, video and ATL animation | Existing Ren'Py facilities remain; equivalent media/output fixtures have not been added to this fork |
 | JSON editor, sortable tables, color controls, cancellable async loaders and charts | Reusable native equivalents still need implementation and representative interaction/output checks |
-| Picker/sharing, secure storage, haptics and other Android services | Native engine APIs and device tests still needed for the donor's exercised operations |
+| File picker/attachment sharing, secure storage, haptics and other Android services | Native engine APIs and device tests still needed for the donor's exercised operations |
 | Deep links and lifecycle/device coverage | Android live Records draft/app switch, background process kill and cold Home recovery pass alongside force-stop/relaunch; deep links, rotation and wider device/lifecycle profiles remain pending |
 | Project creation, release packaging and update acceptance | RAPT disposable APK and API 35 x86_64 interaction checks pass; physical-device, AAB, production signing and update acceptance remain pending |
 | Rive/Lottie | Optional native integration when a concrete use case requires these formats |
 | WebView | Out of scope by product choice |
 | Phone camera, GPS and audio recording | Remain disabled |
 
-The [verified run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38199188437)
-passes 50 Python tests, 25 checks with each real host renderer and ten Android
+The [verified run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38218211725)
+passes 61 Python tests, 27 checks with each real host renderer and eleven Android
 emulator acceptance checks. The Android profile is API 35 x86_64 at 720×1280/160 dpi,
 using an APK targeting API 36. It verifies the native app/story controls above,
-including Unicode/multiline clipboard input, live app switching, two force-stop
+including Unicode/multiline clipboard input, native text sharing with exact
+Intent/Android UI-thread checks, live app switching, two force-stop
 restarts and two background process kills. Native recovery preserves the latest
 waiting choice/dialogue, and app switching from cold Home keeps its pending
-checkpoint. Broader JNI service operations, Unicode IME composition, board
+checkpoint. File picking/attachments, receiving-app delivery, broader JNI
+service operations, Unicode IME composition, board
 touch, media output, physical-device performance and wider lifecycle/device
 coverage remain unverified. See
 [Codex handoff](codex-handoff.md) and the committed
-[lifecycle acceptance receipt](android-lifecycle-acceptance.json). The earlier
+[sharing acceptance receipt](android-sharing-acceptance.json). The earlier
+[lifecycle](android-lifecycle-acceptance.json),
 [clipboard](android-clipboard-acceptance.json) and
 [foundation](android-acceptance.json) receipts are retained. Full RenFletPy parity has not yet
 been established.

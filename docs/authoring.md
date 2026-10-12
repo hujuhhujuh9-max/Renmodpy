@@ -140,6 +140,7 @@ the visible saved fields, separated by blank lines; an unsaved form draft is
 kept. History exports remove Ren'Py formatting tags. Unicode and line breaks
 are retained. Dismissing the chooser returns to the same live menu and waiting
 story; sharing does not submit a record or change a checkpoint or clipboard.
+The form input stays inactive on return; tap a field to continue editing.
 
 Project Python can request the same chooser on Ren'Py's owning thread:
 

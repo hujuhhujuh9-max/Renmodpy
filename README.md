@@ -74,10 +74,11 @@ and Android packaging.
 | Records | Versioned JSON, atomic writes, stale-edit checks; outside story saves |
 | Reusable record forms | Add/edit/cancel/delete/reload, multiline fields, custom schemas and collections |
 | Clipboard | Copy visible record fields or plain history lines; append Unicode/multiline text to form drafts |
+| Android text sharing | Native chooser for visible saved record fields and plain history lines; unsaved drafts are kept |
 | Named checkpoints | Ren'Py save/load, confirmations and stale-save checks |
 | Quick save/load, history, reading settings, replay | Native save slots, history/preferences and full engine restart |
 | Tactics interlude | Saved board/camera state and a native displayable |
-| Android JNI helpers | Donor class-loader setup; device validation pending |
+| Android JNI helpers | Donor class-loader setup and retained UI-thread callbacks; broader worker/device coverage pending |
 
 The example uses a 720×1280 portrait canvas. Screens are included in the
 engine; projects choose which screens and story labels to use. The public
@@ -105,7 +106,7 @@ RenFletPy is the behavioral benchmark. See [feature parity](docs/feature-parity.
 for implemented features and remaining Android-service/control gaps, and
 [authoring](docs/authoring.md) for an integrated app/story project.
 
-The [Android validation run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38199188437)
+The [Android validation run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38218211725)
 passes on Android 15/API 35 x86_64: real input, cold Resume, older Quick load,
 named save/overwrite/load/delete and replay preserve the continuous app/story
 session and current Records/settings. Native history/record copy and Unicode
@@ -113,14 +114,19 @@ clipboard paste also pass, including rejecting invalid field input without
 losing a draft. App switching preserves the live Records draft, and background
 process recovery restores the latest waiting choice or dialogue. Switching
 away from cold Home before Resume keeps its pending recovery checkpoint.
+Share line and Share record open the real Android text chooser with exact
+Unicode/multiline payloads. Back returns to the same menu and waiting story,
+keeping an unsaved Records draft and leaving its keyboard closed. Sharing runs
+on Android's UI thread without blocking SDL or submitting the draft.
 Engine patches fix the first-dialogue save boundary, cold Home cleanup and a
 crash when switching apps with the keyboard open by handling SDL suspension
 before rendering.
-All 50 Python tests, 25 checks with each native renderer and 10 Android
+All 61 Python tests, 27 checks with each native renderer and 11 Android
 acceptance checks pass. The [Codex handoff](docs/codex-handoff.md)
 links the receipts, screenshots and disposable validation APK.
 
-Physical-device/ARM, rotation/deep links, other Android services, AAB and update
+Physical-device/ARM, file picking/attachment sharing, receiving-app delivery,
+rotation/deep links, other Android services, AAB and update
 acceptance remain pending. Full RenFletPy parity is still work ahead.
 Rive/Lottie and richer controls are
 optional additions when a concrete use case needs them. WebView is out of

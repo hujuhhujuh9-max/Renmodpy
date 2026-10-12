@@ -1,6 +1,6 @@
 # Codex handoff
 
-RenModPy's native app/story foundation now passes Android emulator acceptance.
+RenModPy's native app/story foundation and text sharing pass Android emulator acceptance.
 Read [vision.md](vision.md), [user-prompts.md](user-prompts.md) and `AGENTS.md`
 before continuing. The product remains one continuous Android-only modified
 Ren'Py application, with SDK-/RenFletPy as the quality benchmark.
@@ -15,7 +15,7 @@ Apply later user corrections when interpreting voice-transcription errors.
 - Repository: `hujuhhujuh9-max/Renmodpy`.
 - Review branch: `bootstrap/native-foundation`.
 - Draft review: [PR #1](https://github.com/hujuhhujuh9-max/Renmodpy/pull/1).
-- Verified engine/test revision: `8f472f062ec8111f38d8af7d516752e06f8f4c40`.
+- Verified engine/test revision: `9b83d78054685c30cf017c613c9b37cdc2578a4a`.
 - Donor benchmark: SDK- `0fc79f001b2177a9a31dea31fd781b4cc298a510`.
 - Locked Ren'Py component: `0d58d1fc5b5fed87cb0f54eb717233d05643f506`.
 - Ren'Py/RAPT archives, checksums and notices remain pinned in `sdk-lock.json`.
@@ -41,6 +41,12 @@ keeps the draft unchanged and never writes a record. Stale edits still require
 Reload before saving. Production clipboard reads occur only after Paste is
 requested, and all operations run on Ren'Py's owning thread through SDL.
 
+Native Android Share line/Share record actions export plain history or visible
+saved fields with Unicode and line breaks intact. The chooser runs through the
+retained UI-thread JNI callback; Back keeps the live menu, waiting story and
+unsaved draft, with the form input inactive. Sharing does not submit Records,
+change a save or report delivery to a receiving app.
+
 The later lifecycle continuation preserves the newest native background
 checkpoint when a freshly reopened Home is backgrounded before Resume. It
 also handles queued/buffered SDL suspend events before renderer resize/redraw,
@@ -49,21 +55,23 @@ Normal app switching retains the live Records draft and story session;
 background process kills recover the waiting story choice or later dialogue.
 Submitted Records and reading settings remain current.
 
-The [completed CI run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38199188437)
+The [completed CI run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38218211725)
 passes all three jobs at the verified revision:
 
-- 50 Python state/storage/form/build/clipboard tests.
+- 61 Python state/storage/form/build/clipboard/sharing/JNI callback tests.
 - Real engine compile/lint, rendered menus, record editing, named saves,
   quick load, replay, Android distribution-input checks and the new ordinary
   startup/first-dialogue cold-load regression with both Linux renderers.
   Both renderers also pass SDL clipboard round trips and plain history export.
-  Each passes 25 checks, including three-process choice/dialogue recovery and
-  queued/buffered SDL suspend events handled before renderer redraw.
+  Each passes 27 checks, including three-process choice/dialogue recovery,
+  queued/buffered SDL suspend events before renderer redraw, unavailable-host
+  sharing, and the Android-only Records control across input interactions.
 - RAPT APK compilation and real Android interaction on a rooted Android 15 /
   API 35 x86_64 emulator, at 720×1280 and 160 dpi.
 
 The Android harness drives ADB taps and keyboard events; its APK observer only
-reports state. The ten completed acceptance checks cover:
+reports state and observes the identical native sharing Intent. The eleven
+completed acceptance checks cover:
 
 1. Home/history/settings/Records navigation and Return to the waiting dialogue.
 2. Force-stop/relaunch and durable Resume of the first dialogue, with Records
@@ -88,6 +96,10 @@ reports state. The ten completed acceptance checks cover:
 10. Another background process kill and Resume recovering the later chosen
     dialogue, newer than the explicit Home/quick saves, with current Records
     and reading preferences intact.
+11. History/Records taps opening real text choosers with exact Unicode/multiline
+    payloads on Android's main Looper. Back resumes the same process/menu, keeps
+    the draft/story/Records/settings/saves, leaves Records input inactive and
+    releases the JNI callback. No receiving app is selected.
 
 The lifecycle screenshots show the retained Records draft and recovered
 choice/dialogue. Records screenshots also show the pasted accented, multiline
@@ -99,23 +111,23 @@ the save-name field can be deselected to close the keyboard.
 ## Evidence and validation APK
 
 The latest receipts, APK checksum and engine/example input hashes are
-preserved in [android-lifecycle-acceptance.json](android-lifecycle-acceptance.json).
-The earlier [clipboard](android-clipboard-acceptance.json) and
+preserved in [android-sharing-acceptance.json](android-sharing-acceptance.json).
+The earlier [lifecycle](android-lifecycle-acceptance.json), [clipboard](android-clipboard-acceptance.json) and
 [foundation](android-acceptance.json) receipts remain unchanged. Downloaded CI
 input hashes were compared with the review code and match. Later documentation
 updates do not change those engine/example inputs.
 
-- [Android job and log](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38199188437/job/114648542071)
-- [Android state, screenshots, stopped activity, logcat and build receipt](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38199188437/artifacts/11724329932)
-- [Disposable validation APK and checksum receipt](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38199188437/artifacts/11724788405)
-- [Both native renderer receipts and screenshots](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38199188437/artifacts/11724812924)
+- [Android job and log](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38218211725/job/114707847436)
+- [Android state, chooser/return screenshots, native Intents, view hierarchies, activity dumps, logcat and build receipt](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38218211725/artifacts/11733786529)
+- [Disposable validation APK and checksum receipt](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38218211725/artifacts/11733216793)
+- [Both native renderer receipts and screenshots](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38218211725/artifacts/11733760948)
 
 The artifact retention period is 14 days, expiring on 2026-10-26. The committed
 receipt remains available after the downloadable artifacts expire.
 
-The APK is `org.renmodpy.example-0.1.0-1791775151-release.apk`, targeting API 36.
+The APK is `org.renmodpy.example-0.1.0-1791790345-release.apk`, targeting API 36.
 Its SHA-256 is
-`236f41914ff8bb7a241fbd373c10efc6fb58e95f8d7b6d90dc016d7ad0df956c`.
+`2e4c4ee454a41a554dc8061320ba25ffcd2f4b99bd6adce7e4ff69cf0d51078c`.
 Despite RAPT's filename, this is a disposable test fixture with a temporary
 signing key and read-only observer; the build receipt marks `release: false`.
 
@@ -137,7 +149,7 @@ matching the Python string supplied for its Java `CharSequence` argument.
 The backend now constructs/casts a Java string for that title. The callback
 also uses positional arguments so Pyjnius's native `__cinit__(*args)` accepts
 construction before the Python subclass initializer. Regression tests model
-both JNI argument contracts alongside callback lifetime/error handling.
+these JNI argument contracts alongside callback lifetime/error handling.
 
 The [title-fix run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38213201543)
 opened the chooser on the Android UI thread, but its text extra was a Java
@@ -165,8 +177,8 @@ passed all 61 Python, 27 checks per native renderer and 11 Android checks.
 Its screenshots confirmed both real text choosers and draft retention, but
 also exposed the default-input refocus on return to Records. The new native
 next-interaction assertion fails on that revision; Android acceptance now
-also requires the returned Records input to stay inactive. Final acceptance
-is pending after the focus correction.
+also requires the returned Records input to stay inactive. The final run
+validates the focus correction.
 The [focus-fix run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38216516268)
 passed both native renderer suites, but stopped at History's UI capture:
 UIAutomator returned without creating its XML file. The retained screenshot
@@ -180,6 +192,14 @@ redundant form-focus tap in the harness before typing the retained draft.
 The generic observer tick could precede the first toggle; a second tap then
 disabled the field. Draft setup now focuses once, scrolls if needed, and waits
 for the specific editable field before typing.
+
+The final run at `9b83d78054685c30cf017c613c9b37cdc2578a4a` passes all
+61 Python tests, 27 checks per native renderer and 11 Android checks. Downloaded
+Intent reports, chooser/return screenshots and source hashes match the review
+code. The returned Records screenshot visibly retains “Keep draft” with the
+keyboard closed. History capture needed one retry; the retained diagnostics
+confirm the expected Android hierarchy became ready on the second attempt.
+The APK checksum was independently verified against the downloaded binary.
 
 The APK observer inspects the identical Java Intent dispatched after a real
 tap, records Android main-Looper affinity, and forwards the same request to
@@ -241,10 +261,11 @@ same deletion checks; no speculative filesystem change was made.
 
 Use [feature-parity.md](feature-parity.md) for capability gaps. Physical-device
 and ARM acceptance, Unicode IME composition, rotation/deep links and wider lifecycle profiles,
-board touch/camera acceptance, other Android service operations, AAB packaging and
+board touch/camera acceptance, file picking/attachment sharing, receiving-app
+delivery, other Android service operations, AAB packaging and
 same-key updates remain unverified. Audio/video/ATL and richer app controls
 still need representative native fixtures or implementation. The x86_64
-emulator pass establishes the ten checks above, not full RenFletPy parity.
+emulator pass establishes the eleven checks above, not full RenFletPy parity.
 
 Keep Ren'Py/SDL as the startup/rendering/story/Python owner. Added functionality
 belongs in the engine's Python API, common screens or native Android support.

@@ -18,7 +18,8 @@ as a custom-state save test. It is not the main product direction.
 | Quick save/load, history, reading preferences and replay | Native screens and engine APIs |
 | Record edit/cancel/reload, multiline/custom fields and collections | Built-in reusable form and draft recovery |
 | Clipboard copy/read and Unicode form paste | Native SDL services, Records and history actions; Android acceptance passes |
-| Android JNI worker class-loader helpers | Imported; phone verification pending |
+| Android text sharing | Native text chooser through the engine API, Records and history actions; exact Unicode/multiline payload and draft-preserving return pass on Android |
+| Android JNI class-loader helpers | Imported worker helper plus retained UI-thread sharing callbacks; phone/worker coverage pending |
 | Flutter/Flet controls and transport | Not included |
 | WebView | Out of scope |
 | Rive/Lottie animations | Optional; a concrete use case is needed |
@@ -45,13 +46,18 @@ preservation and replay. Native clipboard copy and Unicode/multiline field paste
 also pass, including rejected-paste draft retention. Lifecycle acceptance now
 passes live Records draft retention, recovery of a waiting choice and later
 dialogue after background process kills, and cold Home app switching.
+Native History/Records sharing now passes exact text payload, Android UI-thread
+dispatch and same-process chooser return checks. The unsaved draft remains
+intact and the form input stays inactive on return. The native callback is
+released and is never part of a story save.
 Local engine patches fix first-dialogue saves restoring across initialization,
 pending-recovery cleanup and SDL suspension running after renderer resize.
 The acceptance receipt and source
 identity are recorded in [Codex handoff](codex-handoff.md).
 
 Physical-device/ARM, Unicode IME composition, rotation/deep links and wider lifecycle profiles,
-board touch/rendering, Android services and AAB/update acceptance remain
+board touch/rendering, file picking/attachment sharing, receiving-app delivery,
+other Android services and AAB/update acceptance remain
 pending. Import checks and Linux probes do not establish these device results.
 
 See [feature parity](feature-parity.md) for the RenFletPy benchmark, current

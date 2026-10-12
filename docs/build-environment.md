@@ -127,6 +127,16 @@ the same Intent through the ordinary launcher; it never selects a receiving app.
 Android Back dismisses the chooser. The harness requires the same process,
 draft, waiting story, Records, reading settings and saves on return, and verifies
 that the retained JNI callback has been released. Chooser/return screenshots,
-activity dumps and Intent JSON are included in the Android evidence artifact.
+activity dumps, Android view hierarchies and Intent JSON are included in the
+Android evidence artifact. The harness waits for the Android view hierarchy to
+be idle before capture; Back must resume RenModPy's activity and produce a
+newer same-process observer tick. System animations are disabled on the
+disposable emulator to keep captures stable.
 Receiving-app delivery and file attachment/picker behavior are outside this
 text-sharing check.
+
+The native screen probe also evaluates the Android-only Records Share button
+using a screen-local platform flag. It runs the actual input-dismissal action
+and host failure path, verifying that the edited draft and stale-edit status
+are retained. This checks screen expressions without substituting for the
+emulator's JNI, chooser and lifecycle acceptance.
