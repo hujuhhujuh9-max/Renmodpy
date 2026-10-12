@@ -81,6 +81,11 @@ and keyboard events through the built-in screens. It tests the first dialogue's
 cold Resume, restoration of an older quick save after making a story choice,
 named save/overwrite/load/delete confirmations and replay. Application Records
 and current reading preferences must survive story restoration and replay.
+Native history/record copy and Unicode/multiline form paste also run through
+real taps. Rejected Title paste must retain the draft, and pasted Records and
+the current platform clipboard must survive older-save loading and replay.
+The read-only observer exports clipboard text only inside this disposable
+validation APK; production screens read it only on a requested Paste action.
 
 Successful runs write `.renmodpy-build/android-check/passed.json`. Screenshots,
 last observed state, logcat and the emulator log are uploaded in the

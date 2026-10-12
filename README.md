@@ -73,6 +73,7 @@ and Android packaging.
 | Home / Start / Return / Resume | Ren'Py menu contexts and a durable resume slot |
 | Records | Versioned JSON, atomic writes, stale-edit checks; outside story saves |
 | Reusable record forms | Add/edit/cancel/delete/reload, multiline fields, custom schemas and collections |
+| Clipboard | Copy visible record fields or plain history lines; append Unicode/multiline text to form drafts |
 | Named checkpoints | Ren'Py save/load, confirmations and stale-save checks |
 | Quick save/load, history, reading settings, replay | Native save slots, history/preferences and full engine restart |
 | Tactics interlude | Saved board/camera state and a native displayable |
@@ -104,11 +105,13 @@ RenFletPy is the behavioral benchmark. See [feature parity](docs/feature-parity.
 for implemented features and remaining Android-service/control gaps, and
 [authoring](docs/authoring.md) for an integrated app/story project.
 
-The [Android validation run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38178146432)
+The [Android validation run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38195036572)
 passes on Android 15/API 35 x86_64: real input, cold Resume, older Quick load,
 named save/overwrite/load/delete and replay preserve the continuous app/story
-session and current Records/settings. A startup save-boundary fix prevents the
-first-dialogue cold Resume crash found by the emulator. All 42 Python tests and
+session and current Records/settings. Native history/record copy and Unicode
+clipboard paste also pass, including rejecting invalid field input without
+losing a draft. A startup save-boundary fix prevents the first-dialogue cold
+Resume crash found by the emulator. All 50 Python tests and
 both native renderer checks pass. The [Codex handoff](docs/codex-handoff.md)
 links the receipts, screenshots and disposable validation APK.
 

@@ -15,7 +15,7 @@ Apply later user corrections when interpreting voice-transcription errors.
 - Repository: `hujuhhujuh9-max/Renmodpy`.
 - Review branch: `bootstrap/native-foundation`.
 - Draft review: [PR #1](https://github.com/hujuhhujuh9-max/Renmodpy/pull/1).
-- Verified engine/test revision: `96eaeb21acf4a87525b84fcbe5f4a128c2966e06`.
+- Verified engine/test revision: `aadefd6f421bfa0163fa187abfbdfdc8a06501f0`.
 - Donor benchmark: SDK- `0fc79f001b2177a9a31dea31fd781b4cc298a510`.
 - Locked Ren'Py component: `0d58d1fc5b5fed87cb0f54eb717233d05643f506`.
 - Ren'Py/RAPT archives, checksums and notices remain pinned in `sdk-lock.json`.
@@ -33,18 +33,27 @@ editable Records. Forms support custom fields, independent collections,
 multiline input, stale-edit protection and draft recovery. Application Records
 remain independent of story snapshots. Tactics remains a regression example.
 
-The [completed CI run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38178146432)
+The 2026-10-12 continuation adds native clipboard copy/read to the engine's
+services API. Records can copy their visible fields and append clipboard text
+to draft fields; history can copy a dialogue line without formatting tags.
+Unicode and multiline Note paste are supported. Invalid or oversized input
+keeps the draft unchanged and never writes a record. Stale edits still require
+Reload before saving. Production clipboard reads occur only after Paste is
+requested, and all operations run on Ren'Py's owning thread through SDL.
+
+The [completed CI run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38195036572)
 passes all three jobs at the verified revision:
 
-- 42 Python state/storage/form/build tests.
+- 50 Python state/storage/form/build/clipboard tests.
 - Real engine compile/lint, rendered menus, record editing, named saves,
   quick load, replay, Android distribution-input checks and the new ordinary
   startup/first-dialogue cold-load regression with both Linux renderers.
+  Both renderers also pass SDL clipboard round trips and plain history export.
 - RAPT APK compilation and real Android interaction on a rooted Android 15 /
   API 35 x86_64 emulator, at 720×1280 and 160 dpi.
 
 The Android harness drives ADB taps and keyboard events; its APK observer only
-reports state. The six completed acceptance checks cover:
+reports state. The seven completed acceptance checks cover:
 
 1. Home/history/settings/Records navigation and Return to the waiting dialogue.
 2. Force-stop/relaunch and durable Resume of the first dialogue, with Records
@@ -57,29 +66,35 @@ reports state. The six completed acceptance checks cover:
    Records, reading settings, quick and named checkpoints.
 6. Cancelled deletion retaining the checkpoint and confirmed deletion removing
    only that checkpoint.
+7. Native history/record copy, Unicode/multiline paste and rejected Title paste
+   preserving the draft. Copied clipboard contents and pasted Records remain
+   current through cold restart, older-save loading and replay.
 
-The Records screenshot shows the Android software keyboard during entry.
+The new Records screenshots show the pasted accented, multiline lighthouse
+note and the copied saved record. The earlier foundation run captured the
+Android software keyboard during entry.
 Menu headings now fit their reserved width, including with larger text, and
 the save-name field can be deselected to close the keyboard.
 
 ## Evidence and validation APK
 
-The original receipts, APK checksum and engine/example input hashes are
-preserved in [android-acceptance.json](android-acceptance.json). Downloaded CI
+The latest receipts, APK checksum and engine/example input hashes are
+preserved in [android-clipboard-acceptance.json](android-clipboard-acceptance.json).
+The earlier [foundation receipt](android-acceptance.json) remains unchanged. Downloaded CI
 input hashes were compared with the review code and match. Later documentation
 updates do not change those engine/example inputs.
 
-- [Android job and log](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38178146432/job/114584809573)
-- [Android state, screenshots, logcat and build receipt](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38178146432/artifacts/11717385651)
-- [Disposable validation APK and checksum receipt](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38178146432/artifacts/11717196333)
-- [Both native renderer receipts and screenshots](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38178146432/artifacts/11716906792)
+- [Android job and log](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38195036572/job/114635711451)
+- [Android state, screenshots, logcat and build receipt](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38195036572/artifacts/11723525771)
+- [Disposable validation APK and checksum receipt](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38195036572/artifacts/11723176887)
+- [Both native renderer receipts and screenshots](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38195036572/artifacts/11722099205)
 
-The artifact retention period is 14 days, expiring on 2026-10-25. The committed
+The artifact retention period is 14 days, expiring on 2026-10-26. The committed
 receipt remains available after the downloadable artifacts expire.
 
-The APK is `org.renmodpy.example-0.1.0-1791755612-release.apk`, targeting API 36.
+The APK is `org.renmodpy.example-0.1.0-1791771382-release.apk`, targeting API 36.
 Its SHA-256 is
-`e33644a07ad48548b490fbb7fce365affba15245478b5347ea8928afff2e1662`.
+`20fda9c62c7895117b2d56616d2a6ee23494e1548d20ed6e63d83483bff4f295`.
 Despite RAPT's filename, this is a disposable test fixture with a temporary
 signing key and read-only observer; the build receipt marks `release: false`.
 
@@ -111,11 +126,11 @@ same deletion checks; no speculative filesystem change was made.
 ## Continue from this foundation
 
 Use [feature-parity.md](feature-parity.md) for capability gaps. Physical-device
-and ARM acceptance, Unicode Android input, rotation/background recovery,
-board touch/camera acceptance, Android service operations, AAB packaging and
+and ARM acceptance, Unicode IME composition, rotation/background recovery,
+board touch/camera acceptance, other Android service operations, AAB packaging and
 same-key updates remain unverified. Audio/video/ATL and richer app controls
 still need representative native fixtures or implementation. The x86_64
-emulator pass establishes the six checks above, not full RenFletPy parity.
+emulator pass establishes the seven checks above, not full RenFletPy parity.
 
 Keep Ren'Py/SDL as the startup/rendering/story/Python owner. Added functionality
 belongs in the engine's Python API, common screens or native Android support.

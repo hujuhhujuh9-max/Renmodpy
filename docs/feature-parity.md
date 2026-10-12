@@ -24,24 +24,26 @@ and [capability assessment](https://github.com/hujuhhujuh9-max/SDK-/blob/0fc79f0
 | Record add/edit/cancel/delete/reload | Android keyboard entry/add/cold persistence pass; native host probes exercise editing/draft recovery, and Python tests cover stale/failed writes |
 | Custom fields and independent collections | `FormField`, `RecordDraft` and named private JSON collections; Python tests and native multiline input probe |
 | Custom screens and activities | Ordinary Ren'Py screens, labels, Python and displayables; tactics demonstrates versioned custom save state |
+| Clipboard copy/read and native form paste | Android history/record copy and Unicode/multiline Note paste pass; rejected Title paste keeps the draft; clipboard and pasted Records remain current after old-save load/replay |
 | Audio, video and ATL animation | Existing Ren'Py facilities remain; equivalent media/output fixtures have not been added to this fork |
 | JSON editor, sortable tables, color controls, cancellable async loaders and charts | Reusable native equivalents still need implementation and representative interaction/output checks |
-| Clipboard, picker/sharing, secure storage, haptics and other Android services | Native engine APIs and device tests still needed for the donor's exercised operations |
+| Picker/sharing, secure storage, haptics and other Android services | Native engine APIs and device tests still needed for the donor's exercised operations |
 | Deep links and lifecycle/device coverage | Android force-stop/relaunch and explicit Resume/named load pass; deep links, rotation and broader background recovery remain pending |
 | Project creation, release packaging and update acceptance | RAPT disposable APK and API 35 x86_64 interaction checks pass; physical-device, AAB, production signing and update acceptance remain pending |
 | Rive/Lottie | Optional native integration when a concrete use case requires these formats |
 | WebView | Out of scope by product choice |
 | Phone camera, GPS and audio recording | Remain disabled |
 
-The [verified run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38178146432)
-passes 42 Python tests, both real host renderers and six Android emulator
+The [verified run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38195036572)
+passes 50 Python tests, both real host renderers and seven Android emulator
 acceptance checks. The Android profile is API 35 x86_64 at 720×1280/160 dpi,
 using an APK targeting API 36. It verifies the native app/story controls above,
-including visible software-keyboard entry and two process restarts. JNI service
-operations, Unicode Android input, board touch, media output, physical-device
+including Unicode/multiline clipboard input and two process restarts. Broader JNI
+service operations, Unicode IME composition, board touch, media output, physical-device
 performance and wider lifecycle/device coverage remain unverified. See
 [Codex handoff](codex-handoff.md) and the committed
-[acceptance receipt](android-acceptance.json). Full RenFletPy parity has not yet
+[clipboard acceptance receipt](android-clipboard-acceptance.json). The earlier
+[foundation receipt](android-acceptance.json) is retained. Full RenFletPy parity has not yet
 been established.
 
 Every follow-up feature should include its native implementation, integration

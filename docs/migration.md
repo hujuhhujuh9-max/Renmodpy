@@ -17,6 +17,7 @@ as a custom-state save test. It is not the main product direction.
 | Named story saves and confirmations | Native backend and screen |
 | Quick save/load, history, reading preferences and replay | Native screens and engine APIs |
 | Record edit/cancel/reload, multiline/custom fields and collections | Built-in reusable form and draft recovery |
+| Clipboard copy/read and Unicode form paste | Native SDL services, Records and history actions; Android acceptance passes |
 | Android JNI worker class-loader helpers | Imported; phone verification pending |
 | Flutter/Flet controls and transport | Not included |
 | WebView | Out of scope |
@@ -36,11 +37,12 @@ their storage/key names and saved module identities differ.
 
 The Android 15/API 35 x86_64 emulator now verifies keyboard entry, Home/Resume,
 named saves, cold process restart, older Quick load, Records/preferences
-preservation and replay. A local engine patch fixes first-dialogue saves
+preservation and replay. Native clipboard copy and Unicode/multiline field paste
+also pass, including rejected-paste draft retention. A local engine patch fixes first-dialogue saves
 restoring across startup initialization. The acceptance receipt and source
 identity are recorded in [Codex handoff](codex-handoff.md).
 
-Physical-device/ARM, Unicode Android input, rotation/background recovery,
+Physical-device/ARM, Unicode IME composition, rotation/background recovery,
 board touch/rendering, Android services and AAB/update acceptance remain
 pending. Import checks and Linux probes do not establish these device results.
 
