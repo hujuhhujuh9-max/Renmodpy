@@ -42,6 +42,21 @@ same waiting story interaction. Loading a checkpoint restores native script
 position and saveable project state, then reads current application data and
 preferences.
 
+Android's existing SDL suspend handler writes a native recovery checkpoint
+when an active story is backgrounded. If Android kills that process, the next
+Home offers the newest recovery or explicit Resume bookmark. Switching away
+from that cold Home before pressing Resume preserves the recovery checkpoint.
+Returning normally to the still-running story keeps the live session and
+clears its temporary recovery file. Starting/replaying or completing a story
+clears both kinds of Resume bookmark through `begin_story()`/`finish_story()`.
+Quick and named saves are independent.
+
+A Records draft stays in its live menu during a normal app switch. Submit a
+record to persist it across process death; recovering a story restores the
+waiting story interaction, while saved Records and reading preferences remain
+current. `config.save_on_mobile_background` controls the underlying Ren'Py
+recovery save and defaults to enabled.
+
 ## Reusable Records
 
 `ShowMenu("renmodpy_records")` opens the default Title/Note collection.

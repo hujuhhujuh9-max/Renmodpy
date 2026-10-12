@@ -45,6 +45,7 @@ init 900 python:
         state = {"boot": _rm_android_probe.boot, "sequence": _rm_android_probe.sequence, "android": renpy.android,
             "engine": renpy.version_string, "screens": screens, "buttons": buttons,
             "physical_size": renpy.get_physical_size(), "virtual_size": [config.screen_width, config.screen_height],
+            "recovery_file": _rm_android_os.path.join(config.savedir, "_reload-1" + renpy.savegame_suffix),
             "main_menu": main_menu, "history": [entry.what for entry in _history_list],
             "font_size": _preferences.font_size, "text_cps": _preferences.text_cps,
             "quick": _rm_services.quick_available(), "resume": _rm_services.resume_slot(),

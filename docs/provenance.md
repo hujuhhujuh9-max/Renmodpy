@@ -39,6 +39,16 @@ past initialized history/defaults when saving on the first dialogue. It adds
 no player rollback API or rewind history. Host and Android acceptance exercise
 ordinary main-menu startup and cold Resume of that first interaction.
 
+`engine/patches/mobile-recovery-preservation.patch` changes mobile recovery
+cleanup in the same locked component's `renpy/display/core.py`. A cold Home
+does not create a background save; returning to it must therefore keep the
+previous process's pending `_reload-1` checkpoint. The patch skips cleanup
+under the same main-menu/replay conditions that skip mobile saving. Returning
+normally to a live story still clears its temporary background checkpoint.
+This preserves the donor's documented background recovery behavior using the
+existing native save handler and RenModPy Home, with no additional service or
+Android host changes.
+
 The tactics model and renderer were originally adapted by SDK- from the
 owner's 2d-test commit `7dc24c50ef8900ede31dd4bcdc01422b55d5addb`.
 

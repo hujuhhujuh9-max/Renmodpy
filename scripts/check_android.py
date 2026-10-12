@@ -4,6 +4,7 @@
 import argparse
 import json
 from pathlib import Path
+import shlex
 import subprocess
 import time
 
@@ -48,6 +49,43 @@ def run(apk, output):
 
     def screen(name):
         return wait(lambda s: name in s["screens"], "Screen did not open: " + name)
+
+    def wait_device(predicate, message, timeout=60):
+        # The observer intentionally stops when SDL is suspended. Wait for
+        # Android/device state rather than an update from the paused engine.
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if predicate():
+                return
+            time.sleep(0.4)
+        raise RuntimeError(message)
+
+    def recovery_file(current):
+        return shlex.quote(current["recovery_file"])
+
+    def background(current):
+        previous = adb("exec-out", "cat", recovery_file(current), check=False).stdout
+        adb("shell", "input", "keyevent", "3")
+        wait_device(lambda: b"state=STOPPED" in adb(
+            "shell", "dumpsys", "activity", "activities", PACKAGE).stdout,
+            "Android did not stop the background activity")
+        if not current["main_menu"]:
+            wait_device(lambda: adb("exec-out", "cat", recovery_file(current), check=False).stdout not in (b"", previous),
+                        "SDL did not finish writing its background checkpoint")
+
+    def foreground(current, name):
+        adb("shell", "am", "start", "-W", "-n", ACTIVITY)
+        return wait(lambda s: s["boot"] == current["boot"] and s["sequence"] > current["sequence"]
+                    and name in s["screens"], "Android did not restore the live " + name + " screen")
+
+    def cold_background(current):
+        background(current)
+        adb("shell", "am", "kill", PACKAGE)
+        wait_device(lambda: not adb("shell", "pidof", PACKAGE, check=False).stdout.strip(),
+                    "Android did not kill the stopped app process")
+        adb("shell", "am", "start", "-W", "-n", ACTIVITY)
+        return wait(lambda s: s["boot"] != current["boot"] and "main_menu" in s["screens"],
+                    "Background process recovery did not reopen Home")
 
     def capture(name):
         (output / (name + ".png")).write_bytes(adb("exec-out", "screencap", "-p").stdout)
@@ -94,7 +132,8 @@ def run(apk, output):
         screen("renmodpy_home")
 
     def choose(caption):
-        tap_point(360, 1000, screen("say"))
+        if "choice" not in state()["screens"]:
+            tap_point(360, 1000, screen("say"))
         screen("choice")
         tap(caption)
         return wait(lambda s: "say" in s["screens"] and "choice" not in s["screens"]
@@ -155,6 +194,17 @@ def run(apk, output):
         tap("Records")
         screen("renmodpy_records")
         enter("title", "Emulator note")
+        draft = state()
+        assert draft["editable_field"] == "title" and draft["records"] == []
+        background(draft)
+        returned = foreground(draft, "renmodpy_records")
+        assert returned["draft"] == draft["draft"] and returned["editing"] == draft["editing"]
+        assert returned["history"] == original_history and returned["records"] == []
+        assert returned["font_size"] == 1.25 and returned["text_cps"] == 0
+        wait_device(lambda: adb("shell", "test", "-f", recovery_file(returned), check=False).returncode != 0,
+                    "Live foreground return did not clear its temporary checkpoint")
+        capture("background-restored-draft")
+        checks.append("Android app switching preserves the live Records draft, waiting story and reading settings without saving a record")
         tap("Paste", occurrence=0)
         rejected = wait(lambda s: "single line" in s.get("form_message", ""), "Multiline title paste was not rejected")
         assert rejected["draft"] == {"title": "Emulator note", "body": ""}
@@ -187,8 +237,39 @@ def run(apk, output):
         assert restored["font_size"] == 1.25 and restored["text_cps"] == 0
         capture("restarted-dialogue")
         checks.append("Force-stop/relaunch and durable Resume preserve story position, private Records and reading preferences")
+        # The waiting choice is newer than the explicit Home/quick saves.
+        # Exercise native background saving without using the app's Home.
+        tap_point(360, 1000, restored)
+        pending_choice = screen("choice")
+        assert pending_choice["note_result"] is None
+        cold_home = cold_background(pending_choice)
+        assert cold_home["resume"] == "_reload-1"
+        recovery = adb("exec-out", "cat", recovery_file(cold_home)).stdout
+        # A fresh Home may be backgrounded before the user clicks Resume.
+        # Its foreground cleanup must not throw away the pending recovery.
+        background(cold_home)
+        returned_home = foreground(cold_home, "main_menu")
+        assert returned_home["resume"] == "_reload-1"
+        assert adb("exec-out", "cat", recovery_file(returned_home)).stdout == recovery
+        capture("background-recovery-home")
+        tap("Resume story")
+        recovered_choice = screen("choice")
+        assert recovered_choice["history"] == pending_choice["history"] and recovered_choice["note_result"] is None
+        assert recovered_choice["records"][0]["values"] == saved_record["values"]
+        assert recovered_choice["font_size"] == 1.25 and recovered_choice["text_cps"] == 0
+        capture("background-choice")
+        checks.append("A background process kill recovers the waiting choice; switching apps from cold Home keeps that latest checkpoint")
         chosen = choose("Keep a copy")
         assert chosen["history"] != original_history and "kept a copy" in chosen["note_result"]
+        cold_home = cold_background(chosen)
+        assert cold_home["resume"] == "_reload-1"
+        tap("Resume story")
+        recovered_dialogue = screen("say")
+        assert recovered_dialogue["history"] == chosen["history"] and recovered_dialogue["note_result"] == chosen["note_result"]
+        assert recovered_dialogue["records"][0]["values"] == saved_record["values"]
+        assert recovered_dialogue["font_size"] == 1.25 and recovered_dialogue["text_cps"] == 0
+        capture("background-dialogue")
+        checks.append("Native background recovery restores dialogue and choices newer than the explicit saves while keeping Records and reading settings")
         home()
         tap("Quick load")
         screen("confirm")

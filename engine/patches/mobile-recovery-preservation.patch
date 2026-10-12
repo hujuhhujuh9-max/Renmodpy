@@ -1,0 +1,15 @@
+--- a/renpy/display/core.py
++++ b/renpy/display/core.py
+@@ -1909,6 +1909,12 @@
+         Delete an unused mobile reload file.
+         """
+ 
++        # Cold Home has not restored the previous process's recovery yet.
++        # Main menu and replay do not create a new mobile save, so returning
++        # from their background must keep the pending story checkpoint.
++        if renpy.store.main_menu or renpy.store._in_replay:
++            return
++
+         # Since we came back to life, we can get rid of the
+         # auto-reload.
+         renpy.loadsave.unlink_save("_reload-1")

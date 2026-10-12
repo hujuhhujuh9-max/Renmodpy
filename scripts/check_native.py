@@ -88,6 +88,22 @@ def check(sdk, output):
                 if phase != "save" and json.loads((output / ("startup-" + phase + "-passed.json")).read_text()).get("result") != "passed":
                     raise RuntimeError("First-dialogue Home load did not finish: " + phase)
         receipt["checks"].append("ordinary startup and fresh-process Home Resume/Quick load restore the first dialogue")
+        # Exercise the same save/cleanup policy used by Android's SDL suspend
+        # handler. Actual OS app switching and process death run on Android.
+        with tempfile.TemporaryDirectory(prefix="lifecycle-", dir=output) as directory:
+            lifecycle_project = Path(directory)
+            shutil.copytree(sdk / "renmodpy-example", lifecycle_project, dirs_exist_ok=True,
+                            ignore=IGNORE_PROJECT)
+            shutil.copy2(ROOT / "scripts/lifecycle_probe.rpy", lifecycle_project / "game/lifecycle_probe.rpy")
+            (output / "lifecycle-passed.json").unlink(missing_ok=True)
+            for phase in ("save-choice", "resume-choice", "resume-dialogue"):
+                run("lifecycle-" + phase, project_path=lifecycle_project,
+                    RENMODPY_LIFECYCLE_PHASE=phase, RENPY_SKIP_MAIN_MENU="",
+                    RENMODPY_CHECK_SAVEDIR=str(lifecycle_project / "saves"))
+            lifecycle = json.loads((output / "lifecycle-passed.json").read_text())
+            if lifecycle.get("result") != "passed":
+                raise RuntimeError("Native background recovery did not finish its assertions.")
+            receipt["checks"].extend(lifecycle["checks"])
         for screen in ("home", "records", "records-edit", "records-saved", "saves", "dialogue",
                        "story-home", "history", "settings", "saved-catalog", "replay-confirm",
                        "tactics", "reloaded-tactics"):

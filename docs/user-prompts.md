@@ -87,3 +87,7 @@ intent is recorded in [vision.md](vision.md).
 ## 17 — Continued work, 2026-10-12
 
 > Continue the work we had.
+
+## 18 — Continued work, 2026-10-12
+
+> Continue working
