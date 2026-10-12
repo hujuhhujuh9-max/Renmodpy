@@ -154,11 +154,12 @@ def run(apk, output):
         wait_device(lambda: share_report().get("sequence", 0) > previous,
                     "The requested Android Intent was not observed")
         report = share_report()
+        (output / (evidence + "-intent.json")).write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
         assert report["boot"] == before["boot"] and report["ui_thread"]
         assert report["chooser_action"] == "android.intent.action.CHOOSER"
         assert report["action"] == "android.intent.action.SEND" and report["mime"] == "text/plain"
-        assert report["text"] == text and report["subject"] is None and not report["stream"]
-        (output / (evidence + "-intent.json")).write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
+        assert report["text"] == text, "Android text extra did not match: " + repr(report)
+        assert report["subject"] is None and not report["stream"]
         capture(evidence + "-chooser")
         adb("shell", "input", "keyevent", "4")
         returned = wait(lambda s: s["boot"] == before["boot"] and s["sequence"] > before["sequence"]

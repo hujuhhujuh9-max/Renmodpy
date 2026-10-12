@@ -12,13 +12,15 @@ def _launch(activity, chooser):
 
 def share_text(text, subject, on_error):
     Intent = autoclass("android.content.Intent")
+    JavaString = autoclass("java.lang.String")
     activity = autoclass("org.renpy.android.PythonSDLActivity").mActivity
     intent = Intent(Intent.ACTION_SEND)
     intent.setType("text/plain")
-    intent.putExtra(Intent.EXTRA_TEXT, text)
+    # Python str can match putExtra's char[] overload in this JNI binding.
+    intent.putExtra(Intent.EXTRA_TEXT, JavaString(text))
     if subject:
-        intent.putExtra(Intent.EXTRA_SUBJECT, subject)
+        intent.putExtra(Intent.EXTRA_SUBJECT, JavaString(subject))
     # This JNI overload requires a Java CharSequence, not a Python string.
-    title = cast("java.lang.CharSequence", autoclass("java.lang.String")("Share text"))
+    title = cast("java.lang.CharSequence", JavaString("Share text"))
     chooser = Intent.createChooser(intent, title)
     run_on_ui_thread(lambda: _launch(activity, chooser), on_error=on_error)

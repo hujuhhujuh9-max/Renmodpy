@@ -24,7 +24,9 @@ class AndroidSharingContractTests(unittest.TestCase):
             def setType(self, mime):
                 self.mime = mime
             def putExtra(self, key, value):
-                self.extras[key] = value
+                # The locked JNI binding chooses char[] for Python str
+                # values; Java String extras require explicit Java objects.
+                self.extras[key] = value.value if isinstance(value, JavaString) else list(value)
             @staticmethod
             def createChooser(intent, title):
                 # The real JNI signature accepts CharSequence, and does not

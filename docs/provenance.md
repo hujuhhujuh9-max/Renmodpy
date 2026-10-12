@@ -42,7 +42,8 @@ Android platform calls replace the donor's Flet sharing transport. The donor's
 and does not establish parity for its file picker or attachment operation.
 The locked JNI binding requires an explicit Java `CharSequence` for the
 chooser title and positional arguments when constructing the native callback
-subclass. Acceptance diagnostics retain the real Android exception when a
+subclass. Text and subject extras use explicit Java strings to avoid the
+binding selecting `putExtra`'s `char[]` overload. Acceptance diagnostics retain the real Android exception when a
 request fails; regression tests model both native argument contracts.
 
 `engine/patches/startup-load-boundary.patch` corrects the donor's removal of
