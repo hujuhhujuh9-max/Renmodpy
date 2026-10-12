@@ -8,4 +8,6 @@ traceback.txt
 errors.txt
 *.apk
 *.aab
+*.keystore
+*.jks
 

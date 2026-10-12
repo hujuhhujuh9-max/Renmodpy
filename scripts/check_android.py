@@ -377,6 +377,17 @@ def run(apk, output, upgrade_apk=None):
             "plaintext_on_disk": False, "outside_backup": True, "owner_thread": stored["service_fixture"]["owner_thread"]}, indent=2) + "\n")
         checks.append("Android Keystore private text is encrypted outside backup; worker JNI uses the app loader and callbacks run on the engine owner")
         checks.append("Native haptic requests run on Android's UI thread and return a boolean without claiming physical vibration")
+        tap("Custom records fixture"); screen("renmodpy_records")
+        enter("name", "Separate note", scroll="up")
+        enter("details", "Custom fields", scroll="down")
+        tap("Add record", scroll="down")
+        separate = wait(lambda s: len(s["other_records"]) == 1, "Custom collection did not save")
+        assert separate["other_records"][0]["values"] == {"name": "Separate note", "details": "Custom fields"}
+        assert separate["records"] == []
+        capture("custom-collection")
+        home(); tap("Records"); ordinary = screen("renmodpy_records")
+        assert ordinary["records"] == [] and ordinary["other_records"] == separate["other_records"]
+        checks.append("A real native custom-field form saves into its own private collection without changing ordinary Records")
         home()
         tap("Media room"); screen("renmodpy_example_media")
         wait(lambda s: s.get("media", {}).get("video_texture") and s["media"].get("audio_position") is not None,
@@ -510,6 +521,13 @@ def run(apk, output, upgrade_apk=None):
         assert imported["draft"] == {"title": "Keep draft", "body": ""}
         assert imported["records"][1]["values"]["extra"] == "Hidden backup field"
         (output / "import-confirmed.json").write_text(json.dumps(imported, indent=2, ensure_ascii=False) + "\n")
+        tap("Title A–Z", scroll="down")
+        sorted_records = wait(lambda s: s.get("displayed_record_ids") == ["a" * 32, saved_record["id"]],
+                              "Sorting did not change the visible record order")
+        assert sorted_records["records"] == imported["records"] and sorted_records["draft"] == imported["draft"]
+        capture("records-sorted")
+        tap("Saved order", scroll="up")
+        wait(lambda s: s.get("displayed_record_ids") == [saved_record["id"], "a" * 32], "Saved order did not restore")
         tap("Delete", occurrence=1, scroll="down")
         screen("confirm"); tap("No")
         wait(lambda s: "confirm" not in s["screens"], "Record delete cancellation did not close")
@@ -685,7 +703,7 @@ def run(apk, output, upgrade_apk=None):
             adb("shell", "am", "start", "-W", "-n", ACTIVITY)
             upgraded = wait(lambda s: s["boot"] != before_upgrade["boot"] and "main_menu" in s["screens"]
                             and s.get("app_version") == "0.1.1", "Same-key APK upgrade did not start the new version")
-            for key in ("records", "font_size", "text_cps", "quick", "saves"):
+            for key in ("records", "other_records", "font_size", "text_cps", "quick", "saves"):
                 assert upgraded[key] == before_upgrade[key], "APK upgrade changed " + key
             tap("Validation tools"); screen("renmodpy_validation_tools")
             service("Read newer fixture", "read-newer")

@@ -14,7 +14,7 @@ def create_project(sdk, destination, name, package):
         raise ValueError("Use a printable project name of 1–80 characters.")
     if not re.fullmatch(r"[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*){2,}", package):
         raise ValueError("Use a lowercase Android package such as org.example.story.")
-    reserved = {"class", "int", "new", "for", "if", "else", "return", "package", "import", "public", "private", "static", "void", "null", "true", "false"}
+    reserved = set("abstract assert boolean break byte case catch char class const continue default do double else enum extends final finally float for goto if implements import instanceof int interface long native new package private protected public return short static strictfp super switch synchronized this throw throws transient try void volatile while null true false _".split())
     if any(part in reserved for part in package.split(".")):
         raise ValueError("Android package components cannot be Java keywords.")
     if destination.exists():

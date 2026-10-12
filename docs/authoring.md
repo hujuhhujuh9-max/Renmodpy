@@ -159,5 +159,84 @@ the chooser was dismissed or a receiving app sent anything.
 Empty/non-text or null-containing values raise `ValueError`. Unsupported
 platforms or immediate dispatch failures raise `app.ShareError`; a later UI
 launch failure is notified on Ren'Py's thread. The built-in screens keep the
-draft on failures. This API shares text only; file attachments and file picking
-still need their own implementation and acceptance.
+draft on failures.
+
+## Documents and Records backups
+
+`app.pick_text(callback, mime="text/plain", max_bytes=8388608)` opens Android's
+document picker. `app.export_text(filename, text, callback, mime="text/plain")`
+opens its save picker. The callback receives `(value, error)` on Ren'Py's owning
+thread: selected UTF-8 text or `True` after a completed write; `(None, None)`
+means cancellation. An error is a plain message. Invalid arguments raise
+`ValueError`; unavailable platforms or immediate launch failures raise
+`app.FileError`. Only one picker request may be active. Native document IO runs
+on a class-loader-bound worker, and native objects/callbacks never enter saves.
+The engine polls activity results automatically. Pickers use scoped content
+URIs and need no broad external-storage permission. UTF-8 documents are bounded
+at 8 MiB; invalid encoding is rejected without changing Records or the draft.
+
+Built-in Android Records offers Import backup, Export backup and Share backup.
+The version-1 JSON backup includes IDs and every saved field, including fields
+omitted by the current form. It excludes the local concurrency revision and
+unsaved drafts. Imports first show new/updated/unchanged counts. Only **Import
+these records** commits the merge. Matching IDs update supplied fields while
+keeping omitted fields; unrelated rows remain. A stale preview must be refreshed
+before confirmation. An edited row requires Reload after an import, preserving
+the draft until the user chooses how to proceed.
+
+`renpy.renmodpy.transfers.dump_records(store.snapshot())`, `load_records(text)`
+and `preview_records(snapshot, rows)` expose this versioned format. Apply an
+approved candidate with `store.merge(rows, expected_revision=snapshot["revision"])`.
+The merged collection is validated and written atomically. Imported IDs must be
+canonical 32-character UUID hex; collections allow at most 1,000 rows and each
+row at most 32 text fields. Backups from SDK-'s Flet preferences require an
+explicit conversion; they are not silently treated as this format.
+
+Saved order and the first field's A–Z control change only the displayed row
+order. Alphabetical sorting is case-insensitive, retains record identities and
+does not write the collection, reset the draft or change the current edit.
+
+`app.share_file(filename, data, mime="application/octet-stream", subject="")`
+shares non-empty bytes up to 8 MiB through Android's chooser and a temporary
+cache-backed content URI with a read grant. Filenames are printable basenames
+of 1–128 characters. Share errors follow the same immediate/queued behavior as
+text sharing. The API does not report receiving-app delivery. Old export cache
+directories are removed after 24 hours on a subsequent attachment request.
+
+## Private text and touch feedback
+
+`app.secure_set(key, text, callback)`, `secure_get(key, callback)` and
+`secure_delete(key, callback)` use Android Keystore AES-GCM on Android 6/API 23
+or later. Keys are printable names of 1–128 characters; text is bounded at
+64 KiB UTF-8. Callbacks run on the engine owner and receive `(value, error)`.
+Set returns `True` after atomic commit; get returns text or `None` when absent;
+delete returns whether the entry existed. Authentication/read failures return
+an error and preserve the encrypted bytes and existing key. Request failures
+raise `app.StorageError`, and argument errors raise `ValueError`.
+
+Encrypted entries live in the application's no-backup directory, independently
+of Records and story saves. The key name is authenticated with the ciphertext.
+Hardware-backed encryption depends on the device; emulator acceptance does not
+establish hardware protection. Keep decrypted values out of `default`,
+`persistent`, story variables, backups, logs and diagnostics. A Python module's
+private state can hold a value for the current process without saving it.
+Uninstall/data clearing removes the app's entries and Keystore key.
+
+`app.haptic("selection", callback=None)` and `app.haptic("confirm", callback=None)`
+request the platform's native touch feedback on the UI thread. An optional
+callback receives an accepted boolean or an error. Acceptance does not prove
+felt vibration, which depends on device hardware and settings. Records requests
+confirmation feedback after a successful submit.
+
+## Project menus and media
+
+Projects can add Home destinations with plain pairs of captions and screen names:
+
+```renpy
+define renmodpy_home_links = (("Notes", "my_notes"),)
+```
+
+The example's Media room uses `Play`/`Stop`, `Movie` and an ATL transform on
+ordinary native Ren'Py channels. Leaving it stops playback without changing the
+waiting story. Its tone and color video are original generated assets; no
+additional renderer, service or animation runtime is required.

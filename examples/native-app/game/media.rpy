@@ -17,7 +17,9 @@ screen renmodpy_example_media():
     style_prefix "renmodpy"
     add Solid("#101d27")
     on "show" action Play("example_tone", "media/tone.wav", loop=True)
+    on "replace" action Play("example_tone", "media/tone.wav", loop=True)
     on "hide" action Stop("example_tone")
+    on "replaced" action Stop("example_tone")
     vbox:
         xpos 36
         ypos 44

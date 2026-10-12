@@ -23,7 +23,7 @@ as a custom-state save test. It is not the main product direction.
 | Flutter/Flet controls and transport | Not included |
 | WebView | Out of scope |
 | Rive/Lottie animations | Optional; a concrete use case is needed |
-| Secure storage and picker | Follow-up only when needed |
+| Secure storage and picker | New native Keystore/scoped-document APIs and Records backups; Android validation in progress |
 | Rich code editor and advanced tables | Optional feature-specific work |
 
 The example uses native Ren'Py menu contexts to retain live story progress.

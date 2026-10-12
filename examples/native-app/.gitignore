@@ -1,0 +1,11 @@
+*.rpyc
+*.pyc
+__pycache__/
+saves/
+log.txt
+traceback.txt
+errors.txt
+*.keystore
+*.jks
+*.apk
+*.aab

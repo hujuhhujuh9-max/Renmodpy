@@ -3,6 +3,7 @@
 
 import argparse
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -11,6 +12,7 @@ import subprocess
 import re
 import time
 import zipfile
+import tarfile
 from create_project import create_project
 
 
@@ -71,6 +73,18 @@ def main():
         return re.search(r"certificate SHA-256 digest: ([0-9a-f]+)", result.stdout).group(1)
     certificate = apk_certificate(apk)
     assert apk_certificate(upgrade_apk) == certificate
+    def apk_metadata(path):
+        badging = subprocess.run([str(android_tools / "aapt2"), "dump", "badging", str(path)],
+                                 capture_output=True, text=True, check=True).stdout
+        package, code, version = re.search(r"package: name='([^']+)' versionCode='(\d+)' versionName='([^']+)'", badging).groups()
+        permissions = re.findall(r"uses-permission: name='([^']+)'", badging)
+        assert "android.permission.WRITE_EXTERNAL_STORAGE" not in permissions
+        assert not set(permissions) & {"android.permission.CAMERA", "android.permission.RECORD_AUDIO", "android.permission.ACCESS_FINE_LOCATION"}
+        return {"package": package, "version_code": int(code), "version": version, "permissions": permissions}
+    base_metadata, upgrade_metadata = apk_metadata(apk), apk_metadata(upgrade_apk)
+    assert base_metadata["package"] == upgrade_metadata["package"] == "org.renmodpy.example"
+    assert upgrade_metadata["version_code"] > base_metadata["version_code"]
+    assert (base_metadata["version"], upgrade_metadata["version"]) == ("0.1.0", "0.1.1")
     verified = subprocess.run(["jarsigner", "-verify", str(aab)], capture_output=True, text=True, check=True)
     assert "jar verified." in verified.stdout
     bundle_cert = subprocess.run(["keytool", "-printcert", "-jarfile", str(aab)], capture_output=True, text=True, check=True)
@@ -80,6 +94,11 @@ def main():
         assert "base/manifest/AndroidManifest.xml" in names and "base/dex/classes.dex" in names
         assert any(name.startswith("base/lib/arm64-v8a/") for name in names)
         assert any(name.startswith("base/lib/x86_64/") for name in names)
+        assert not any("probe" in name for name in names if name.startswith("base/assets/"))
+        with tarfile.open(fileobj=io.BytesIO(archive.read("base/assets/private.mp3")), mode="r:gz") as private:
+            private_names = private.getnames()
+            assert any("renpy/renmodpy" in name and "services" in name for name in private_names)
+            assert not any("android_probe" in name or "native_probe" in name for name in private_names)
     assert not list((clean_project / "game").glob("*probe*"))
     subprocess.run([str(sdk / "rapt/project/gradlew"), "--stop"], check=False)
     with apk.open("rb") as stream:
@@ -89,6 +108,7 @@ def main():
         "upgrade_apk": str(upgrade_apk), "upgrade_sha256": hashlib.sha256(upgrade_apk.read_bytes()).hexdigest(),
         "aab": str(aab), "aab_sha256": hashlib.sha256(aab.read_bytes()).hexdigest(),
         "signer_sha256": certificate, "same_key_upgrade": True,
+        "base_metadata": base_metadata, "upgrade_metadata": upgrade_metadata,
         "fresh_project_package": "org.renmodpy.packaging", "fresh_project_has_observers": False,
         "aab_signed": True, "aab_abis": ["arm64-v8a", "x86_64"],
         "release": False}, indent=2) + "\n")

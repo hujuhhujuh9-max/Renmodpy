@@ -4,7 +4,8 @@ The assembly host is Linux x86_64, matching the pinned donor SDK. The product
 target is Android only. Host checks use Python 3.12 or later and the standard
 library. Install Git LFS and `patch` for pinned input retrieval and the Android
 activity-result patch. GitHub Actions also supplies SDL/Mesa and Xvfb for
-native checks.
+native checks. Screenshot evidence checks additionally use Pillow 12.3.0;
+install it with `python3 -m pip install Pillow==12.3.0` before native validation.
 
 `python3 prepare.py setup` downloads only Ren'Py and RAPT from their pinned
 component commits. Size and SHA-256 checks run before extraction. No Flutter,
@@ -132,8 +133,64 @@ Android evidence artifact. The harness waits for the Android view hierarchy to
 be idle before capture; Back must resume RenModPy's activity and produce a
 newer same-process observer tick. System animations are disabled on the
 disposable emulator to keep captures stable.
-Receiving-app delivery and file attachment/picker behavior are outside this
-text-sharing check.
+Receiving-app delivery is outside this text-sharing check. The new document and
+attachment check uses a separate offline fixture app, described below.
+
+## Fresh projects and signed artifacts
+
+The assembled SDK includes a project creator:
+
+```bash
+python3 /path/to/sdk/create_project.py /path/to/my-story --name 'My Story' --package org.example.mystory
+/path/to/sdk/renpy.sh /path/to/my-story compile
+/path/to/sdk/renpy.sh /path/to/my-story lint
+```
+
+It refuses existing destinations, assigns the project's own Android/save/build
+identity and copies the ordinary example without saves, keys or test observers.
+Edit `game/script.rpy` and the project's `.android.json` for your application.
+The example's portrait orientation and empty optional permission list are the
+starting configuration.
+
+For a distributable application, use RAPT's normal key-generation/configuration
+workflow or your existing signing configuration. Keep and back up the same
+signing key for future updates. Stock RAPT project keys are `android.keystore`
+and `bundle.keystore` with alias/password `android`; an existing custom signing
+configuration can use `update_keystores: false` and the SDK's
+`rapt/project/local.properties`/`bundle.properties`. These files hold signing
+credentials and must remain private. Configure the installed Android SDK path
+in `rapt/sdk.txt`, then build through the same native launcher:
+
+```bash
+/path/to/sdk/renpy.sh /path/to/sdk/launcher android_build /path/to/my-story --destination /path/to/artifacts/apk
+/path/to/sdk/renpy.sh /path/to/sdk/launcher android_build /path/to/my-story --bundle --destination /path/to/artifacts/aab
+```
+
+Increment `version` and `numeric_version` in `.android.json` for an update and
+keep `config.version` consistent. RAPT also ensures its numeric version is at
+least the build timestamp. Verify APK signatures with `apksigner verify
+--print-certs` and AAB signatures with `jarsigner -verify`; then exercise an APK
+update using `adb install -r` without clearing data. Creating these artifacts
+does not publish an app or upload anything to a store.
+
+CI now creates its validation project through the same creator, builds a base
+APK and a higher-version APK with the same disposable signing key, and builds
+a signed AAB from a separate clean project. It verifies matching public signing
+certificate digests and ARM64/x86_64 bundle libraries. Keystores are excluded
+from artifacts and source control. These disposable keys are unsuitable for a
+production app; owner-key signing and physical-device installation need the
+owner's actual release environment.
+
+The second fixture APK supplies a local DocumentsProvider, offline attachment
+receiver with a different UID and an InputConnection composing keyboard.
+System picker taps select/read/write real content URIs; the receiver reads only
+the granted attachment and writes its local receipt. It sends no messages and
+has no network permission. The keyboard commits composed Unicode through the
+actual native input connection. Private-storage checks inspect encryption,
+reject tampering and verify persistence across loads/restarts/upgrades. Media
+checks compare decoded video colors and ATL positions in screenshots and
+observe native playback progression. Headless playback does not establish
+audibility or felt haptics.
 
 The native screen probe also evaluates the Android-only Records Share button
 using a screen-local platform flag. It runs the actual input-dismissal action

@@ -17,6 +17,7 @@ init 900 python:
     _rm_android_probe.sequence = 0
     _rm_android_probe.share_sequence = 0
     _rm_android_probe.worker_events = []
+    _rm_android_probe.worker_errors = []
     _rm_android_probe.haptic_events = []
     if renpy.android:
         from jnius import autoclass as _rm_android_autoclass
@@ -35,7 +36,13 @@ init 900 python:
                     "app_loader": bool(thread.getContextClassLoader().equals(_rm_android_activity.getClassLoader())),
                     "ui_thread": bool(_rm_android_autoclass("android.os.Looper").getMainLooper().equals(
                         _rm_android_autoclass("android.os.Looper").myLooper()))})
-                return handler()
+                try:
+                    return handler()
+                except Exception as error:
+                    # The fixture uses public sentinel values only. Preserve
+                    # native failure diagnostics without changing the request.
+                    _rm_android_probe.worker_errors.append({"type": type(error).__name__, "error": str(error)})
+                    raise
             return _rm_android_probe.worker_run(observed, callback, error_message)
         _rm_android_workers.run = _rm_android_worker_run
         # The importing modules bind run_worker during import; observe both
@@ -124,6 +131,7 @@ init 900 python:
             "font_size": _preferences.font_size, "text_cps": _preferences.text_cps,
             "quick": _rm_services.quick_available(), "resume": _rm_services.resume_slot(),
             "records": _rm_services.records().list(), "saves": _rm_services.save_catalog(),
+            "other_records": _rm_services.records("validation-notes").list(),
             "note_result": getattr(renpy.store, "note_result", None),
             "input_text": input_value.get_text() if editable and input_value else None,
             "editable_field": getattr(input_value, "key", "save_name") if editable and input_value else None}
@@ -131,6 +139,7 @@ init 900 python:
             state["device_orientation"] = int(_rm_android_activity.getResources().getConfiguration().orientation)
             state["ui_callbacks"] = len(_rm_android_jni._ui_calls)
             state["worker_events"] = list(_rm_android_probe.worker_events)
+            state["worker_errors"] = list(_rm_android_probe.worker_errors)
             state["haptic_events"] = list(_rm_android_probe.haptic_events)
         if hasattr(renpy.store, "_rm_validation"):
             state["service_fixture"] = dict(_rm_validation.state)
@@ -151,6 +160,7 @@ init 900 python:
             state["editing"] = form.editing_id
             state["form_message"] = form.message
             state["transfer"] = dict(renpy.get_screen_variable("transfer", screen="renmodpy_records"))
+            state["displayed_record_ids"] = [row["id"] for row in renpy.get_screen_variable("displayed_records", screen="renmodpy_records")]
         temporary = _rm_android_probe.directory / "state.tmp"
         temporary.write_text(_rm_android_json.dumps(state, ensure_ascii=False))
         _rm_android_os.replace(temporary, _rm_android_probe.directory / "state.json")

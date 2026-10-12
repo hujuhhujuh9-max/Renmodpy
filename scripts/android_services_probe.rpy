@@ -57,6 +57,8 @@ screen renmodpy_validation_tools():
         textbutton "Delete private fixture" action Function(_rm_validation_request, "delete")
         textbutton "Read missing fixture" action Function(_rm_validation_request, "read-missing")
         textbutton "Touch feedback fixture" action Function(_rm_validation_request, "haptic")
+        textbutton "Custom records fixture" action ShowMenu("renmodpy_records", collection="validation-notes", title="Validation notes",
+            fields=(renmodpy.FormField("name", "Name", required=True), renmodpy.FormField("details", "Details", multiline=True)))
         text _rm_validation.state["result"] style "renmodpy_caption"
         textbutton "Home" action ShowMenu("renmodpy_home")
     key "game_menu" action ShowMenu("renmodpy_home")

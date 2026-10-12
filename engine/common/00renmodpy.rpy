@@ -423,8 +423,10 @@ screen renmodpy_records(collection="records", title="Records", fields=renmodpy.D
     style_prefix "renmodpy"
     default form = renmodpy.RecordDraft(fields)
     default transfer = {"busy": False, "rows": None, "preview": None}
+    default sort_mode = "saved"
     default input_values = {field.name: DictInputValue(form.values, field.name, default=(index == 0)) for index, field in enumerate(form.fields)}
     $ snapshot, read_error = _rm_record_snapshot(collection)
+    $ displayed_records = (sorted(snapshot["records"], key=lambda record: record["values"].get(form.fields[0].name, "").casefold()) if sort_mode == "title" else snapshot["records"])
     $ _rm_transfer_recovery(form, transfer)
     add Solid("#101d27")
     viewport:
@@ -506,11 +508,20 @@ screen renmodpy_records(collection="records", title="Records", fields=renmodpy.D
                     action Function(form.cancel)
             text _rm_literal(read_error or form.message) style "renmodpy_caption"
             textbutton "Reload records" action Function(_rm_reload_records, form, collection)
+            hbox:
+                spacing 12
+                style_prefix "renmodpy_clipboard"
+                textbutton "Saved order":
+                    selected sort_mode == "saved"
+                    action SetScreenVariable("sort_mode", "saved")
+                textbutton (form.fields[0].label + " A–Z"):
+                    selected sort_mode == "title"
+                    action SetScreenVariable("sort_mode", "title")
             null height 10
             vbox:
                 xsize 620
                 spacing 16
-                for record in snapshot["records"]:
+                for record in displayed_records:
                     frame:
                         xsize 620
                         vbox:
