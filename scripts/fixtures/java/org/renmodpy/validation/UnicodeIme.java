@@ -2,6 +2,7 @@ package org.renmodpy.validation;
 
 import android.inputmethodservice.InputMethodService;
 import android.os.Looper;
+import android.util.AtomicFile;
 import android.view.View;
 import android.view.inputmethod.InputConnection;
 import android.widget.Button;
@@ -27,8 +28,14 @@ public class UnicodeIme extends InputMethodService {
                 report.put("x", position[0] + view.getWidth() / 2);
                 report.put("y", position[1] + view.getHeight() / 2);
                 report.put("ui_thread", Looper.myLooper() == Looper.getMainLooper());
-                try (FileOutputStream output = new FileOutputStream(new File(getFilesDir(), "ime.json"))) {
+                AtomicFile target = new AtomicFile(new File(getFilesDir(), "ime.json"));
+                FileOutputStream output = target.startWrite();
+                try {
                     output.write(report.toString().getBytes(StandardCharsets.UTF_8));
+                    target.finishWrite(output);
+                } catch (Exception error) {
+                    target.failWrite(output);
+                    throw error;
                 }
             } catch (Exception error) { throw new RuntimeException(error); }
         });

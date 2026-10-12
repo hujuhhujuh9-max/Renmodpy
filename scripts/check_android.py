@@ -466,9 +466,16 @@ def run(apk, output, upgrade_apk=None):
         adb("shell", "ime", "set", fixture_ime)
         replace_field("title", "")
         wait(lambda s: s.get("editable_field") == "title", "Unicode test field did not receive focus")
-        wait_device(lambda: adb("exec-out", "run-as", FIXTURE_PACKAGE, "cat", "files/ime.json", check=False).returncode == 0,
-                    "The composition keyboard did not open")
-        ime = json.loads(fixture_read("ime.json"))
+        def ime_ready():
+            report = adb("exec-out", "run-as", FIXTURE_PACKAGE, "cat", "files/ime.json", check=False)
+            try:
+                position = json.loads(report.stdout)
+            except ValueError:
+                return False
+            (output / "ime-ready.json").write_text(json.dumps(position) + "\n")
+            return position.get("x", 0) > 0 and position.get("y", 0) > 0
+        wait_device(ime_ready, "The composition keyboard did not open")
+        ime = json.loads((output / "ime-ready.json").read_text())
         assert ime["ui_thread"]
         adb("shell", "input", "tap", str(ime["x"]), str(ime["y"]))
         composed = wait(lambda s: s.get("input_text") == "café", "Native IME composition did not reach the form")
