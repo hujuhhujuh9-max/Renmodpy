@@ -134,6 +134,16 @@ def run(apk, output):
                 pass
         return {}
 
+    def android_ui_idle(evidence):
+        # The resumed-activity dump can precede the chooser's first frame.
+        # UIAutomator waits for the actual Android view hierarchy to be idle.
+        path = "/sdcard/renmodpy-ui.xml"
+        adb("shell", "rm", "-f", path)
+        adb("shell", "uiautomator", "dump", "--compressed", path)
+        hierarchy = adb("exec-out", "cat", path).stdout
+        (output / (evidence + "-ui.xml")).write_bytes(hierarchy)
+        return hierarchy
+
     def share(name, text, screen_name, evidence, *, scroll=None):
         before = state()
         previous = share_report().get("sequence", 0)
@@ -160,13 +170,23 @@ def run(apk, output):
         assert report["action"] == "android.intent.action.SEND" and report["mime"] == "text/plain"
         assert report["text"] == text, "Android text extra did not match: " + repr(report)
         assert report["subject"] is None and not report["stream"]
+        assert b'package="com.android.intentresolver"' in android_ui_idle(evidence + "-chooser")
         capture(evidence + "-chooser")
+        paused = state()
         adb("shell", "input", "keyevent", "4")
-        returned = wait(lambda s: s["boot"] == before["boot"] and s["sequence"] > before["sequence"]
+        def app_resumed():
+            activity = adb("shell", "dumpsys", "activity", "activities").stdout.decode()
+            (output / (evidence + "-returned-activity.txt")).write_text(activity)
+            return any(ACTIVITY in line and
+                       ("topResumedActivity" in line or "mResumedActivity" in line)
+                       for line in activity.splitlines())
+        wait_device(app_resumed, "Android did not resume RenModPy after dismissing the chooser")
+        returned = wait(lambda s: s["boot"] == before["boot"] and s["sequence"] > paused["sequence"]
                         and screen_name in s["screens"] and s.get("ui_callbacks") == 0,
                         "Dismissing the share chooser did not restore the live app screen")
         for key in ("history", "note_result", "records", "saves", "quick", "font_size", "text_cps", "draft", "editing"):
             assert returned.get(key) == before.get(key), "Sharing changed " + key
+        assert b'package="org.renmodpy.example"' in android_ui_idle(evidence + "-returned")
         capture(evidence + "-returned")
         return returned
 
@@ -205,6 +225,8 @@ def run(apk, output):
         for namespace, name in (("global", "device_provisioned"), ("secure", "user_setup_complete"),
                                 ("secure", "show_ime_with_hard_keyboard")):
             adb("shell", "settings", "put", namespace, name, "1")
+        for name in ("window_animation_scale", "transition_animation_scale", "animator_duration_scale"):
+            adb("shell", "settings", "put", "global", name, "0")
         adb("shell", "settings", "put", "secure", "immersive_mode_confirmations", "confirmed")
         adb("shell", "input", "keyevent", "224")
         adb("shell", "wm", "dismiss-keyguard")

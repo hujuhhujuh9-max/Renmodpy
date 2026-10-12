@@ -144,13 +144,21 @@ opened the chooser on the Android UI thread, but its text extra was a Java
 `char[]`: Pyjnius selected that `putExtra` overload for a Python string.
 The backend now passes explicit Java `String` objects for text and subject.
 The [payload-fix run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38214007868)
-then verified the exact Unicode/multiline history payload and same-session
-return. Creating a saved Record exposed an Android-only screen expression
+then verified the exact Unicode/multiline history payload. Creating a saved
+Record exposed an Android-only screen expression
 using `input.Disable()` where `input` was Ren'Py's function. The screen now
 uses the existing `DisableAllInputValues` action. A native regression evaluates
 that same Android-only control, reproduced the exception before the fix, and
 checks that sharing disables the keyboard while preserving the edited draft.
 Full Android sharing acceptance is still pending after that correction.
+Screenshot review also found that the resumed-activity dump could precede
+the chooser's first frame, and the return check could read a pre-suspend
+observer tick. The harness now waits for the real Android view hierarchy to
+be idle, requires RenModPy to be the resumed activity on Back, and then
+requires a newer same-process observer tick. CI disables system animations
+and retains both view hierarchies and activity dumps with the screenshots.
+Run `38215041919` was cancelled before Android acceptance because this
+harness correction superseded it.
 
 The APK observer inspects the identical Java Intent dispatched after a real
 tap, records Android main-Looper affinity, and forwards the same request to
