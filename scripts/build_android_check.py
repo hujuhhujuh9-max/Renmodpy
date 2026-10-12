@@ -55,7 +55,9 @@ def main():
 
     apk = build(project, output / "apks")
     upgrade = output / "upgrade-project"
-    shutil.copytree(project, upgrade, ignore=shutil.ignore_patterns("*.rpyc", "saves", "log.txt", "errors.txt", "traceback.txt"))
+    # Ren'Py merges statement identities from the previous compiled scripts.
+    # Dropping them makes old saves fall back to an earlier surviving label.
+    shutil.copytree(project, upgrade, ignore=shutil.ignore_patterns("saves", "log.txt", "errors.txt", "traceback.txt"))
     configuration = json.loads((upgrade / ".android.json").read_text())
     configuration.update(version="0.1.1", numeric_version=int(time.time()) + 1)
     (upgrade / ".android.json").write_text(json.dumps(configuration, indent=2) + "\n")

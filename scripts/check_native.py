@@ -89,7 +89,20 @@ def check(sdk, output):
                     RENMODPY_CHECK_SAVEDIR=str(startup_project / "saves"))
                 if phase != "save" and json.loads((output / ("startup-" + phase + "-passed.json")).read_text()).get("result") != "passed":
                     raise RuntimeError("First-dialogue Home load did not finish: " + phase)
+            with tempfile.TemporaryDirectory(prefix="startup-upgrade-", dir=output) as directory:
+                upgraded_project = Path(directory)
+                shutil.copytree(startup_project, upgraded_project, dirs_exist_ok=True,
+                                ignore=shutil.ignore_patterns("log.txt", "traceback.txt", "errors.txt"))
+                script = upgraded_project / "game/script.rpy"
+                script.write_text(script.read_text().replace('define config.version = "0.1.0"', 'define config.version = "0.1.1"'))
+                (output / "startup-upgrade-passed.json").unlink(missing_ok=True)
+                run("startup-upgrade", project_path=upgraded_project,
+                    RENMODPY_STARTUP_PHASE="upgrade", RENPY_SKIP_MAIN_MENU="",
+                    RENMODPY_CHECK_SAVEDIR=str(startup_project / "saves"))
+                if json.loads((output / "startup-upgrade-passed.json").read_text()).get("result") != "passed":
+                    raise RuntimeError("Recompiled project upgrade did not restore the older first-dialogue save.")
         receipt["checks"].append("ordinary startup and fresh-process Home Resume/Quick load restore the first dialogue")
+        receipt["checks"].append("a recompiled version update preserves statement identities and loads the previous release's first-dialogue save")
         # Exercise the same save/cleanup policy used by Android's SDL suspend
         # handler. Actual OS app switching and process death run on Android.
         with tempfile.TemporaryDirectory(prefix="lifecycle-", dir=output) as directory:

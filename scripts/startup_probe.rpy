@@ -45,6 +45,8 @@ init 900 python:
                 renpy.run([Function(_rm_return_home), ShowMenu("renmodpy_home")])
                 return
             assert history == _rm_startup_json.loads((output / "startup-checkpoint.json").read_text())
+            if phase == "upgrade":
+                assert config.version == "0.1.1"
             assert [row["values"]["title"] for row in _rm_services.records().list()] == ["After the first-line save"]
             assert _preferences.font_size == 1.25 and _preferences.text_cps == 0
             assert renpy.screenshot(str(output / ("startup-" + phase + ".png")))
