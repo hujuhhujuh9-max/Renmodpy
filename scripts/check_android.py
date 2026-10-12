@@ -293,10 +293,19 @@ def run(apk, output, upgrade_apk=None):
         payload = json.loads(receipt["text"])
         assert payload["type"] == "renmodpy.records" and payload["records"] == before["records"]
         assert receipt["sha256"] == hashlib.sha256(receipt["text"].encode()).hexdigest()
+        android_ui_idle(evidence + "-received", FIXTURE_PACKAGE)
         capture(evidence + "-received")
         adb("shell", "input", "keyevent", "4")
-        wait_device(lambda: PACKAGE.encode() in adb("shell", "dumpsys", "activity", "activities").stdout.split(
-            b"topResumedActivity=")[-1].split(b"\n")[0], "The receiver did not resume the main activity")
+        # Android may launch a chosen receiver in its own task; Back then
+        # returns to the launcher. Reopen the sender through its real activity.
+        adb("shell", "am", "start", "-W", "-n", ACTIVITY)
+        def sender_resumed():
+            activity = adb("shell", "dumpsys", "activity", "activities").stdout.decode()
+            (output / (evidence + "-returned-activity.txt")).write_text(activity)
+            return any(ACTIVITY in line and
+                       ("topResumedActivity" in line or "mResumedActivity" in line)
+                       for line in activity.splitlines())
+        wait_device(sender_resumed, "Android did not foreground the main activity after receiving the attachment")
         returned = wait(lambda s: "renmodpy_records" in s["screens"] and s["sequence"] > before["sequence"],
                         "The offline receiver did not return to Records")
         assert returned["boot"] == before["boot"] and returned["draft"] == before["draft"]
