@@ -6,6 +6,8 @@ init 900 python:
     import os as _rm_lifecycle_os
     import sys as _rm_lifecycle_sys
     import types as _rm_lifecycle_types
+    import renpy as _rm_lifecycle_engine
+    import renpy.pygame as _rm_lifecycle_pygame
     from pathlib import Path as _rm_lifecycle_Path
 
     _rm_lifecycle_probe = _rm_lifecycle_types.ModuleType("renmodpy_lifecycle_probe")
@@ -16,6 +18,17 @@ init 900 python:
     config.savedir = _rm_lifecycle_os.environ["RENMODPY_CHECK_SAVEDIR"]
     config.autosave_frequency = None
     config.always_shown_screens.append("renmodpy_lifecycle_driver")
+
+    def _rm_lifecycle_before_draw():
+        if _rm_lifecycle_probe.mode == "suspend-event":
+            assert not _rm_lifecycle_pygame.event.peek(_rm_lifecycle_pygame.APP_WILLENTERBACKGROUND), "Renderer ran before the pending SDL suspend"
+            buffered = renpy.display.interface.pushed_event
+            assert not buffered or buffered.type != _rm_lifecycle_pygame.APP_WILLENTERBACKGROUND, "Renderer ran before the buffered SDL suspend"
+            assert not renpy.can_load("_reload-1")
+            _rm_lifecycle_probe.mode = "event-foreground"
+        return False
+
+    config.needs_redraw_callbacks.append(_rm_lifecycle_before_draw)
 
     def _rm_lifecycle_tick():
         mode = _rm_lifecycle_probe.mode
@@ -101,12 +114,33 @@ init 900 python:
             renpy.display.interface.mobile_unlink()
             assert not renpy.can_load("_reload-1")
             assert [entry.what for entry in _history_list] == history and note_result == result
+            # Exercise real SDL lifecycle events as well as the save policy.
+            # Host renderers use the mobile event path only for this fixture.
+            _rm_lifecycle_engine.mobile = True
+            _rm_lifecycle_probe.event_source = "queue"
+            _rm_lifecycle_probe.mode = "suspend-event"
+            _rm_lifecycle_pygame.event.post(_rm_lifecycle_pygame.event.Event(_rm_lifecycle_pygame.APP_WILLENTERBACKGROUND))
+            _rm_lifecycle_pygame.event.post(_rm_lifecycle_pygame.event.Event(_rm_lifecycle_pygame.APP_DIDENTERFOREGROUND))
+            return
+        if mode == "event-foreground":
+            assert renpy.get_screen("say") and not main_menu and _history
+            expected = _rm_lifecycle_json.loads((output / "lifecycle-dialogue.json").read_text())
+            assert {"history": [entry.what for entry in _history_list], "note_result": note_result} == expected
+            assert not renpy.can_load("_reload-1") and _rm_services.quick_available()
+            if _rm_lifecycle_probe.event_source == "queue":
+                _rm_lifecycle_probe.event_source = "buffered"
+                _rm_lifecycle_probe.mode = "suspend-event"
+                renpy.display.interface.pushed_event = _rm_lifecycle_pygame.event.Event(_rm_lifecycle_pygame.APP_WILLENTERBACKGROUND)
+                _rm_lifecycle_pygame.event.post(_rm_lifecycle_pygame.event.Event(_rm_lifecycle_pygame.APP_DIDENTERFOREGROUND))
+                return
+            assert renpy.screenshot(str(output / "lifecycle-live-foreground.png"))
             (output / "lifecycle-passed.json").write_text(_rm_lifecycle_json.dumps({
                 "result": "passed", "checks": [
                     "cold Home app switch keeps the latest background checkpoint",
                     "fresh-process recovery restores a waiting choice and later chosen dialogue",
                     "recovery keeps newer Records and reading preferences",
-                    "live foreground cleanup keeps the story session and quick save"]}, indent=2))
+                    "live foreground cleanup keeps the story session and quick save",
+                    "queued/buffered SDL suspend runs before renderer redraw and preserves the live dialogue"]}, indent=2))
             renpy.quit(status=0, save=False)
 
 screen renmodpy_lifecycle_driver():

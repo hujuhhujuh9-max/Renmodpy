@@ -62,6 +62,7 @@ class BuildTests(unittest.TestCase):
         self.assertIn("engine/common/00renmodpy.rpy", receipt["source_files"])
         self.assertIn("engine/patches/startup-load-boundary.patch", receipt["source_files"])
         self.assertIn("engine/patches/mobile-recovery-preservation.patch", receipt["source_files"])
+        self.assertIn("engine/patches/mobile-suspend-before-render.patch", receipt["source_files"])
         self.assertFalse((output / "renpy/common/00start.rpyc").exists())
         with self.assertRaises(FileExistsError):
             assemble(inputs, output, with_android=False)

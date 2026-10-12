@@ -49,6 +49,16 @@ This preserves the donor's documented background recovery behavior using the
 existing native save handler and RenModPy Home, with no additional service or
 Android host changes.
 
+`engine/patches/mobile-suspend-before-render.patch` prioritizes pending SDL
+suspend events before renderer resize/redraw in that component's same native
+interaction loop. Android acceptance exposed a missing-current-GL-context
+shader error while backgrounding Records with the keyboard open, before the
+ordinary event handler could write its recovery save. The patch runs the
+existing suspend/save/wait/foreground handler first, preserving its normal
+display-reset path. Host fixtures inject SDL suspend/foreground events and
+verify their ordering before redraw; Android acceptance exercises the actual
+surface and keyboard lifecycle.
+
 The tactics model and renderer were originally adapted by SDK- from the
 owner's 2d-test commit `7dc24c50ef8900ede31dd4bcdc01422b55d5addb`.
 

@@ -66,9 +66,11 @@ def run(apk, output):
     def background(current):
         previous = adb("exec-out", "cat", recovery_file(current), check=False).stdout
         adb("shell", "input", "keyevent", "3")
-        wait_device(lambda: b"state=STOPPED" in adb(
-            "shell", "dumpsys", "activity", "activities", PACKAGE).stdout,
-            "Android did not stop the background activity")
+        def stopped():
+            activity = adb("shell", "dumpsys", "activity", "-p", PACKAGE, "activities").stdout
+            (output / "background-activity.txt").write_bytes(activity)
+            return b"state=STOPPED" in activity
+        wait_device(stopped, "Android did not stop the background activity")
         if not current["main_menu"]:
             wait_device(lambda: adb("exec-out", "cat", recovery_file(current), check=False).stdout not in (b"", previous),
                         "SDL did not finish writing its background checkpoint")

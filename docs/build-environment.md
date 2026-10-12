@@ -87,6 +87,15 @@ the current platform clipboard must survive older-save loading and replay.
 The read-only observer exports clipboard text only inside this disposable
 validation APK; production screens read it only on a requested Paste action.
 
+Lifecycle checks press Android's system Home, wait for the activity to stop and
+for its native recovery file to be written, then return through the real
+activity. The live Records draft must remain unchanged without creating a
+record. Separate checks kill the stopped app process with `am kill`, reopen
+Home and use Resume to recover a waiting choice and later dialogue newer than
+the explicit saves. Switching apps again from cold Home must keep that pending
+recovery file byte-for-byte. Observer boot IDs distinguish the live return from
+the new processes; a paused observer is never used to drive recovery.
+
 Successful runs write `.renmodpy-build/android-check/passed.json`. Screenshots,
 last observed state, logcat and the emulator log are uploaded in the
 `android-emulator-check` artifact, alongside the APK build log and checksum
@@ -100,3 +109,11 @@ save restoration from crossing initialization; assembly records the patch's
 hash and removes the stale compiled startup script. Android runtime acceptance
 still requires the emulator job's actual interaction result. See
 [Codex handoff](codex-handoff.md) for recorded runs and remaining device coverage.
+
+The native lifecycle probe also uses three fresh processes to exercise the
+engine's real mobile-save/cleanup methods and load the recovery through Home.
+It verifies that cold Home preserves a pending checkpoint, that a waiting
+choice and later dialogue restore, and that returning to the live story still
+clears the temporary save. The recovery-cleanup patch is recorded in the SDK
+input inventory. This host policy check complements the Android OS interaction
+checks above.
