@@ -1,0 +1,17 @@
+--- a/renpy/display/core.py
++++ b/renpy/display/core.py
+@@ -2771,6 +2771,14 @@
+ 
+                 renpy.execution.not_infinite_loop(10)
+ 
++                # SDL may have released Android's GL context while pumping
++                # events. Suspend before renderer resize/redraw can use it.
++                if renpy.mobile:
++                    if self.pushed_event and self.pushed_event.type == pygame.APP_WILLENTERBACKGROUND:
++                        self.check_suspend(self.event_poll())
++                    for background_event in pygame.event.get(pygame.APP_WILLENTERBACKGROUND):
++                        self.check_suspend(background_event)
++
+                 # Check for autoreload.
+                 renpy.loader.check_autoreload()
+ 

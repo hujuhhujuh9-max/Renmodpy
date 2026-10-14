@@ -1,0 +1,24 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="org.renmodpy.validation">
+    <uses-sdk android:minSdkVersion="23" android:targetSdkVersion="36" />
+    <application android:label="RenModPy test receiver" android:debuggable="true" android:allowBackup="false">
+        <activity android:name=".LinkActivity" android:exported="true" />
+        <activity android:name=".ReceiverActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/json" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+        <provider android:name=".FixtureDocuments" android:authorities="org.renmodpy.validation.documents"
+            android:permission="android.permission.MANAGE_DOCUMENTS" android:exported="true"
+            android:grantUriPermissions="true">
+            <intent-filter><action android:name="android.content.action.DOCUMENTS_PROVIDER" /></intent-filter>
+        </provider>
+        <service android:name=".UnicodeIme" android:permission="android.permission.BIND_INPUT_METHOD"
+            android:label="RenModPy test keyboard" android:exported="true">
+            <intent-filter><action android:name="android.view.InputMethod" /></intent-filter>
+            <meta-data android:name="android.view.im" android:resource="@xml/input_method" />
+        </service>
+    </application>
+</manifest>

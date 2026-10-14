@@ -1,0 +1,133 @@
+name: Validate RenModPy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  host:
+    name: Python state and build checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.12'
+      - run: python3 -m unittest discover -s tests -t . -v
+      - run: python3 -m compileall -q engine/python prepare.py build_sdk.py scripts
+
+  native:
+    name: Native Ren'Py save and screen checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.12'
+      - name: Install native validation dependencies
+        run: |
+          python3 -m pip install Pillow==12.3.0
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y git-lfs patch xvfb libegl1 libgl1-mesa-dri libsdl2-2.0-0
+      - name: Assemble pinned engine and RAPT
+        run: python3 build_sdk.py
+      - name: Compile, lint, render, save, restart and check Android distribution
+        run: xvfb-run -a -s '-screen 0 1080x1920x24' python3 scripts/check_native.py --sdk .renmodpy-build/renmodpy-sdk
+      - name: Check headless software rendering and save continuity
+        run: SDL_VIDEODRIVER=dummy RENPY_RENDERER=sw python3 scripts/check_native.py --sdk .renmodpy-build/renmodpy-sdk --output .renmodpy-build/native-check-software
+      - name: Upload native check evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: native-check
+          path: |
+            .renmodpy-build/native-check/*.log
+            .renmodpy-build/native-check/*.json
+            .renmodpy-build/native-check/*.png
+            .renmodpy-build/native-check/*.xml
+            .renmodpy-build/native-check-software/*.log
+            .renmodpy-build/native-check-software/*.json
+            .renmodpy-build/native-check-software/*.png
+            .renmodpy-build/native-check-software/*.xml
+            .renmodpy-build/renmodpy-sdk/renmodpy-build.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  android:
+    name: Android APK and emulator checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      ANDROID_USER_HOME: ${{ github.workspace }}/.renmodpy-build/android-user
+      ANDROID_AVD_HOME: ${{ github.workspace }}/.renmodpy-build/android-user/avd
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@2a69be27b0baa8a7ec1c0ba665dc022b180664c5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@035682743ab223ec9c6169af09811dff8247e520
+        with:
+          packages: platform-tools platforms;android-36 build-tools;36.0.0
+          log-accepted-android-sdk-licenses: false
+      - name: Install Android build dependencies
+        run: |
+          python3 -m pip install Pillow==12.3.0
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y git-lfs patch libegl1 libgl1-mesa-dri libsdl2-2.0-0
+          test -e /dev/kvm
+          sudo chown "$USER" /dev/kvm
+      - name: Assemble the engine and build the validation APK
+        run: |
+          python3 build_sdk.py
+          python3 scripts/build_android_check.py --sdk .renmodpy-build/renmodpy-sdk
+          python3 scripts/build_android_fixtures.py
+      - name: Prepare the Android 15 emulator
+        run: |
+          sdk_tools_bin="$ANDROID_HOME/cmdline-tools/latest/bin"
+          test -x "$sdk_tools_bin/sdkmanager"
+          "$sdk_tools_bin/sdkmanager" "emulator" "system-images;android-35;google_apis;x86_64"
+          mkdir -p "$ANDROID_AVD_HOME" .renmodpy-build/android-check
+          "$sdk_tools_bin/avdmanager" create avd --force --name renmodpy --device pixel_2 --path "$ANDROID_AVD_HOME/renmodpy.avd" --package "system-images;android-35;google_apis;x86_64"
+      - name: Install and exercise the APK on Android
+        run: |
+          adb start-server
+          "$ANDROID_HOME/emulator/emulator" -avd renmodpy -skin 720x1280 -no-window -no-audio -no-boot-anim -no-snapshot -no-metrics -gpu swiftshader -memory 2048 -camera-back none -camera-front none -feature -Vulkan > .renmodpy-build/android-check/emulator.log 2>&1 &
+          emulator_pid=$!
+          trap 'adb emu kill >/dev/null 2>&1 || true; kill "$emulator_pid" 2>/dev/null || true' EXIT
+          python3 scripts/check_android.py
+      - name: Upload Android emulator evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: android-emulator-check
+          path: |
+            .renmodpy-build/android-build/build.log
+            .renmodpy-build/android-build/build.json
+            .renmodpy-build/android-check/
+            .renmodpy-build/android-fixtures/build.log
+            .renmodpy-build/android-fixtures/build.json
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload disposable validation APK
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: android-validation-apk
+          path: |
+            .renmodpy-build/android-build/apks/*.apk
+            .renmodpy-build/android-build/upgrades/*.apk
+            .renmodpy-build/android-build/bundles/*.aab
+            .renmodpy-build/android-build/build.json
+          if-no-files-found: warn
+          retention-days: 14

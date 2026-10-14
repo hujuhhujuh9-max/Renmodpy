@@ -1,0 +1,95 @@
+--- a/buildlib/rapt/configure.py
++++ b/buildlib/rapt/configure.py
+@@ -43,6 +43,7 @@
+         self.update_icons = True
+         self.update_always = True
+         self.heap_size = None
++        self.renmodpy_deep_links = False
+         self.update_keystores = True
+ 
+         for fn in [ "android.json", ".android.json" ]:
+--- a/templates/app-AndroidManifest.xml
++++ b/templates/app-AndroidManifest.xml
+@@ -19,4 +19,4 @@
+-        android:launchMode="singleTop"
++        android:launchMode="{% if config.renmodpy_deep_links == true %}singleTask{% else %}singleTop{% endif %}"
+         android:screenOrientation="{{ config.orientation }}"
+         android:exported="true"
+         >
+@@ -25,8 +25,19 @@
+             <action android:name="android.intent.action.MAIN" />
+             <category android:name="android.intent.category.LAUNCHER" />
+         </intent-filter>
++{% if config.renmodpy_deep_links == true %}
++        <intent-filter>
++            <action android:name="android.intent.action.VIEW" />
++            <category android:name="android.intent.category.DEFAULT" />
++            <category android:name="android.intent.category.BROWSABLE" />
++            <data android:scheme="{{ config.package | replace('_', '+') }}" android:host="records" />
++        </intent-filter>
++{% endif %}
+ 
+     </activity>
++{% if config.renmodpy_deep_links == true %}
++    <meta-data android:name="org.renmodpy.deep_links" android:value="true" />
++{% endif %}
+ 
+     <provider
+         android:name="org.renpy.android.RenPyFileProvider"
+--- a/prototype/renpyandroid/src/main/java/org/renpy/android/PythonSDLActivity.java
++++ b/prototype/renpyandroid/src/main/java/org/renpy/android/PythonSDLActivity.java
+@@ -50,6 +50,30 @@
+      * This exists so python code can access this activity.
+      */
+     public static PythonSDLActivity mActivity = null;
++
++    public boolean mRenModPyDeepLinksEnabled = false;
++    private String mRenModPyDeepLink = null;
++
++    private synchronized void offerRenModPyDeepLink(Intent intent) {
++        if (!mRenModPyDeepLinksEnabled || intent == null ||
++                !Intent.ACTION_VIEW.equals(intent.getAction()) || intent.getData() == null) {
++            return;
++        }
++        String uri = intent.getData().toString();
++        String prefix = getPackageName().replace('_', '+') + "://records/";
++        if (uri.length() <= 256 && uri.startsWith(prefix) &&
++                uri.substring(prefix.length()).matches("[0-9a-f]{32}")) {
++            // Keep only the newest undelivered link. Never hold native Intents,
++            // replay getIntent() on polling, or save delivery with story state.
++            mRenModPyDeepLink = uri;
++        }
++    }
++
++    public synchronized String takeRenModPyDeepLink() {
++        String uri = mRenModPyDeepLink;
++        mRenModPyDeepLink = null;
++        return uri;
++    }
+ 
+     /**
+      * The layout that contains the SDL view. VideoPlayer uses this to add
+@@ -327,6 +351,15 @@
+     @Override
+     protected void onCreate(Bundle savedInstanceState) {
+         Log.v("python", "onCreate()");
++        try {
++            Bundle metadata = getPackageManager().getApplicationInfo(getPackageName(),
++                    android.content.pm.PackageManager.GET_META_DATA).metaData;
++            mRenModPyDeepLinksEnabled = metadata != null &&
++                    metadata.getBoolean("org.renmodpy.deep_links", false);
++        } catch (android.content.pm.PackageManager.NameNotFoundException ignored) {
++            mRenModPyDeepLinksEnabled = false;
++        }
++        offerRenModPyDeepLink(getIntent());
+         super.onCreate(savedInstanceState);
+ 
+         if (mLayout == null) {
+@@ -428,6 +461,7 @@
+     protected void onNewIntent(Intent intent) {
+         Log.v("python", "onNewIntent()");
+         setIntent(intent);
++        offerRenModPyDeepLink(intent);
+     }
+ 
+     public boolean mStopDone = true;

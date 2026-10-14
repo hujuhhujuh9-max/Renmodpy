@@ -1,0 +1,13 @@
+.renmodpy-build/
+__pycache__/
+*.py[cod]
+*.rpyc
+saves/
+log.txt
+traceback.txt
+errors.txt
+*.apk
+*.aab
+*.keystore
+*.jks
+

@@ -1,0 +1,56 @@
+--- a/renpy/savestate.py
++++ b/renpy/savestate.py
+@@ -564,6 +564,15 @@
+         if hard:
+             self.retain_after_load_flag = False
+ 
++    def block_load(self, purge=False):
++        """Keep save restoration inside the initialized story context."""
++        if self.current is not None:
++            self.current.not_greedy = True
++        renpy.game.context().force_checkpoint = True
++        if purge:
++            del self.log[:]
++
++
+     def retain_after_load(self):
+         """
+         Called to return data from this statement until the next checkpoint
+--- a/renpy/common/00start.rpy
++++ b/renpy/common/00start.rpy
+@@ -220,6 +220,8 @@
+         if renpy.has_screen("main_menu"):
+             renpy.start_predict_screen("main_menu")
+ 
++        renpy.game.log.block_load()
++
+ 
+     scene black
+ 
+@@ -242,6 +244,8 @@
+     if not _restart:
+         $ renpy.display.interface.with_none(overlay=False)
+ 
++
++    $ renpy.game.log.block_load()
+ 
+     $ _old_game_menu_screen = _game_menu_screen
+     $ _game_menu_screen = None
+@@ -260,6 +264,8 @@
+     $ _history = _old_history
+     $ del _old_history
+ 
++    $ renpy.game.log.block_load()
++
+ 
+     if config.main_menu_music:
+         $ renpy.music.play(config.main_menu_music, if_changed=True, fadein=config.main_menu_music_fadein)
+@@ -309,6 +315,8 @@
+ 
+     python:
+ 
++        renpy.game.log.block_load(purge=True)
++
+         _enter_menu()
+ 
+         renpy.dynamic(_load_prompt=False)
