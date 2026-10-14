@@ -832,6 +832,124 @@ def run(apk, output, upgrade_apk=None):
         wait(lambda s: not any(s.get("draft", {}).values()), "Profile draft did not cancel")
         checks.append("Compact and tall emulator sizes/densities retain the live draft, saved data and reading settings with tappable inputs; a landscape request respects the portrait app")
 
+        # Implicit ACTION_VIEW exercises the packaged intent filter. Explicit
+        # delivery of rejected input also checks the native boundary, rather
+        # than letting the Android resolver reject it before it reaches us.
+        def open_record_link(uri, *, explicit=False, action="android.intent.action.VIEW"):
+            target = ("-n", ACTIVITY) if explicit else ("-p", PACKAGE)
+            launched = adb("shell", "am", "start", "-W", "-a", action,
+                "-c", "android.intent.category.BROWSABLE", "-d", shlex.quote(uri), *target)
+            text = launched.stdout.decode()
+            assert "Error:" not in text, text
+            return text
+
+        enter("title", "Link draft", scroll="up")
+        link_before = state()
+        linked_saved = link_before["records"][0]
+        uri = PACKAGE + "://records/" + linked_saved["id"]
+        open_record_link(uri)
+        linked = wait(lambda s: "renmodpy_linked_record" in s["screens"]
+                      and s.get("linked_identifier") == linked_saved["id"], "Warm Record link did not open")
+        assert linked["boot"] == link_before["boot"] and linked["linked_record"] == linked_saved
+        for key in ("records", "history", "draft", "editing", "font_size", "text_cps", "quick", "saves"):
+            assert linked[key] == link_before[key], "Warm link changed " + key
+        assert linked["editable_field"] is None
+        capture("record-link-warm")
+        tap("Close record")
+        closed = wait(lambda s: "renmodpy_linked_record" not in s["screens"], "Record link did not close")
+        assert closed["draft"] == link_before["draft"] and closed["history"] == link_before["history"]
+        assert closed["editable_field"] is None
+        # A new delivery of the identical link opens once again; draining the
+        # previous Intent must not suppress deliberate repeated requests.
+        open_record_link(uri)
+        screen("renmodpy_linked_record")
+        adb("shell", "input", "keyevent", "4")
+        wait(lambda s: "renmodpy_linked_record" not in s["screens"], "Back did not close the linked Record")
+        tap("Copy link", scroll="down")
+        copied_link = wait(lambda s: s.get("clipboard") == uri, "Copy link did not use the saved Record identity")
+        assert copied_link["draft"] == link_before["draft"]
+        checks.append("Implicit warm Record links, deliberate repeated delivery and Copy link keep the same interpreter, unsaved draft, waiting story, Records and preferences; closing keeps input inactive")
+
+        rejected = (uri + "?action=delete", uri + "#load", uri + "/", uri.replace("records/", "start/"),
+                    uri.replace(PACKAGE, "org.example.other"), "file:///data/user/0/" + PACKAGE + "/files/records.json")
+        rejection_receipts = []
+        for invalid in rejected:
+            prior = state()
+            open_record_link(invalid, explicit=True)
+            after = wait(lambda s: s["sequence"] >= prior["sequence"] + 5,
+                         "Observer did not settle after rejected Record link")
+            assert after["boot"] == prior["boot"] and "renmodpy_linked_record" not in after["screens"]
+            for key in ("records", "history", "draft", "editing", "font_size", "text_cps", "quick", "saves"):
+                assert after[key] == prior[key], "Rejected link changed " + key
+            rejection_receipts.append({"uri": invalid, "ignored": True})
+        prior = state()
+        open_record_link(uri, explicit=True, action="android.intent.action.MAIN")
+        wait(lambda s: s["sequence"] >= prior["sequence"] + 5 and "renmodpy_linked_record" not in s["screens"],
+             "A non-VIEW Intent opened a Record")
+        missing_uri = PACKAGE + "://records/" + "f" * 32
+        open_record_link(missing_uri)
+        missing = screen("renmodpy_linked_record")
+        assert missing["linked_identifier"] == "f" * 32 and missing["linked_record"] is None
+        assert missing["records"] == link_before["records"] and missing["draft"] == link_before["draft"]
+        capture("record-link-missing")
+        tap("Close record")
+        wait(lambda s: "renmodpy_linked_record" not in s["screens"], "Missing Record overlay did not close")
+        (output / "record-links-rejected.json").write_text(json.dumps(rejection_receipts, indent=2) + "\n")
+        checks.append("Malformed, foreign-package, file, label, query/fragment and non-VIEW links cannot act on story or application data; unavailable Records show a closable preview without replacing drafts")
+
+        tap("Cancel edit", scroll="up")
+        home()
+        cold_before = state()
+        adb("shell", "am", "force-stop", PACKAGE)
+        open_record_link(uri)
+        cold_link = wait(lambda s: s["boot"] != cold_before["boot"] and "main_menu" in s["screens"]
+                         and "renmodpy_linked_record" in s["screens"], "Cold implicit Record link did not open over Home")
+        assert cold_link["linked_record"] == linked_saved
+        for key in ("records", "font_size", "text_cps", "quick", "saves"):
+            assert cold_link[key] == cold_before[key], "Cold link changed " + key
+        capture("record-link-cold-home")
+        tap("Close record")
+        wait(lambda s: "renmodpy_linked_record" not in s["screens"], "Cold linked Record did not close")
+        tap("Resume story")
+        cold_story = screen("say")
+        assert cold_story["history"] == cold_before["history"] and cold_story["records"] == cold_before["records"]
+        capture("record-link-cold-resume")
+        checks.append("A cold implicit Record link resolves the package-specific filter and previews current saved data over Home; only an explicit Resume restores the waiting story with current Records and settings")
+
+        open_record_link(uri)
+        background_link = screen("renmodpy_linked_record")
+        background(background_link)
+        recovery_bytes = adb("exec-out", "cat", recovery_file(background_link)).stdout
+        adb("shell", "am", "kill", PACKAGE)
+        wait_device(lambda: not adb("shell", "pidof", PACKAGE, check=False).stdout.strip(),
+                    "Android did not kill the linked-story background process")
+        open_record_link(uri)
+        recovered_link = wait(lambda s: s["boot"] != cold_story["boot"] and "main_menu" in s["screens"]
+                              and "renmodpy_linked_record" in s["screens"], "Record link after background death did not open")
+        assert adb("exec-out", "cat", recovery_file(recovered_link)).stdout == recovery_bytes
+        assert recovered_link["linked_record"] == linked_saved
+        capture("record-link-background-recovery")
+        tap("Close record")
+        wait(lambda s: "renmodpy_linked_record" not in s["screens"], "Recovered Record overlay did not close")
+        assert adb("exec-out", "cat", recovery_file(state())).stdout == recovery_bytes
+        tap("Resume story")
+        recovered_story = wait(lambda s: "say" in s["screens"] and "renmodpy_linked_record" not in s["screens"],
+                               "Loading background recovery replayed the consumed Record overlay")
+        assert recovered_story["history"] == cold_story["history"] and recovered_story["records"] == cold_story["records"]
+        # Periodic polling and ordinary menu navigation must not replay a
+        # consumed URI or save its delivery in a story checkpoint.
+        home(); tap("Records"); final_records = screen("renmodpy_records")
+        final_records = wait(lambda s: s["sequence"] >= final_records["sequence"] + 5,
+                             "Observer did not settle after link recovery")
+        assert "renmodpy_linked_record" not in final_records["screens"]
+        capture("record-link-returned-records")
+        (output / "record-links.json").write_text(json.dumps({"uri": uri, "saved_record": linked_saved,
+            "warm_boot": link_before["boot"], "cold_boot": cold_link["boot"],
+            "recovery_boot": recovered_link["boot"], "draft_preserved": True, "repeated_delivery": True,
+            "input_inactive_on_close": True, "recovery_sha256": hashlib.sha256(recovery_bytes).hexdigest(),
+            "recovery_preserved": True, "automatic_story_load": False, "consumed_links_replayed": False}, indent=2) + "\n")
+        checks.append("Implicit link launch after background process death preserves the pending recovery bytes; explicit Resume restores the waiting dialogue and consumed Intents never reopen after menu navigation")
+
         receipt = {"result": "passed", "platform": "Android emulator", "engine": loaded["engine"],
             "api": adb("shell", "getprop", "ro.build.version.sdk").stdout.decode().strip(),
             "abi": adb("shell", "getprop", "ro.product.cpu.abi").stdout.decode().strip(),

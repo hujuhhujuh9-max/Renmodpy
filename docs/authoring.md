@@ -240,3 +240,41 @@ The example's Media room uses `Play`/`Stop`, `Movie` and an ATL transform on
 ordinary native Ren'Py channels. Leaving it stops playback without changing the
 waiting story. Its tone and color video are original generated assets; no
 additional renderer, service or animation runtime is required.
+
+## Links to saved Records
+
+Set `"renmodpy_deep_links": true` in the project's `.android.json` before
+building. The bundled example and project template enable this demonstration;
+omitting the setting or setting it to `false` removes the VIEW/BROWSABLE filter
+and disables native delivery. Rebuild the APK after changing it.
+
+`app.record_link(identifier)` returns a link to a saved Record in the default
+`records` collection. The built-in Records screen also offers **Copy link**.
+The scheme is the application's Android package, with any underscore changed
+to `+` because underscores are invalid in URI schemes. For example:
+
+```text
+org.example.story://records/0123456789abcdef0123456789abcdef
+```
+
+Opening this link shows a read-only preview of the current saved Title/Note
+over the existing screen. Close or Android Back returns to that screen with
+its unsaved form and waiting story kept; form input stays inactive. A cold
+launch previews over Home, where Resume remains an explicit user action.
+Missing/deleted Records show an unavailable message. Custom collections and
+custom form schemas are outside this initial route; preview fields use
+`renmodpy.DEFAULT_FIELDS` and never expose hidden fields.
+
+Only canonical, case-sensitive package links with exactly one 32-character
+lowercase hexadecimal ID are accepted. Other schemes, paths, query strings,
+fragments, encoded characters and non-VIEW Intents are ignored. Links cannot
+choose a story label, checkpoint, file or operation, and never write Records.
+They reference data already on that installation; copying a link does not
+export its contents or make it work on a different installation.
+
+The Android activity captures initial and new Intents into one synchronized
+pending text slot. Ren'Py consumes it on its owning thread; the newest
+undelivered valid link wins. Polling never replays `getIntent()`. Loading a
+story checkpoint dismisses any saved preview so a consumed link cannot reopen
+from a background save. This is a custom URI scheme, not a verified HTTPS
+Android App Link; it has no domain ownership or browser association setup.

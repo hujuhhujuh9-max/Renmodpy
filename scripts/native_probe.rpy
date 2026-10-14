@@ -154,6 +154,35 @@ init 900 python:
             assert dict(form.values) == _rm_check_probe.sharing_draft
             assert form.editing_id == _rm_check_probe.sharing_identifier and not form.needs_reload
             del renpy.get_screen("renmodpy_records").scope["renpy"]
+            _rm_check_probe.link_form = form
+            _rm_check_probe.link_history = list(_history_list)
+            _rm_check_probe.mode = "records-link"
+            _rm_open_record_link(_rm_check_probe.sharing_identifier)
+            return None
+        if mode == "records-link":
+            assert renpy.get_screen("renmodpy_records") and renpy.get_screen("renmodpy_linked_record")
+            row = renpy.get_screen_variable("linked_record", screen="renmodpy_linked_record")
+            assert row["id"] == _rm_check_probe.sharing_identifier
+            form = renpy.get_screen_variable("form", screen="renmodpy_records")
+            assert form is _rm_check_probe.link_form and dict(form.values) == _rm_check_probe.sharing_draft
+            assert _history_list == _rm_check_probe.link_history
+            assert not renpy.get_editable_input_value()[1]
+            _rm_check_capture("linked-record")
+            _rm_check_probe.mode = "records-link-missing"
+            _rm_open_record_link("f" * 32)
+            return None
+        if mode == "records-link-missing":
+            assert renpy.get_screen_variable("linked_record", screen="renmodpy_linked_record") is None
+            _rm_check_capture("linked-record-missing")
+            _rm_check_probe.mode = "records-link-closed"
+            _rm_close_record_link_after_load()
+            return None
+        if mode == "records-link-closed":
+            assert not renpy.get_screen("renmodpy_linked_record")
+            form = renpy.get_screen_variable("form", screen="renmodpy_records")
+            assert form is _rm_check_probe.link_form and dict(form.values) == _rm_check_probe.sharing_draft
+            assert form.editing_id == _rm_check_probe.sharing_identifier and not form.needs_reload
+            assert _history_list == _rm_check_probe.link_history and not renpy.get_editable_input_value()[1]
             _rm_check_probe.mode = "records-edit"
             return None
         if mode == "records-edit":
@@ -331,6 +360,8 @@ label renmodpy_check_start:
                 "SDL clipboard Unicode/multiline copy/paste and plain history export",
                 "sharing unavailable on the host preserves Records drafts and the story session",
                 "Android-only Records share controls evaluate and disable input without changing the draft",
+                "linked Record overlay renders current saved data and preserves the underlying edited form, inactive input and waiting story",
+                "missing Record links and closing the overlay preserve drafts and story history",
                 "backup preview/confirmed import keeps edited drafts and hidden fields and requires reload",
                 "casefold Records sorting and saved order retain stored rows and the edited draft",
                 "reading settings survive restart and older story load",

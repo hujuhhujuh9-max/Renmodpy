@@ -1,6 +1,6 @@
 # Original user prompts
 
-Recorded on 2026-10-11 and 2026-10-12. Project prompts are preserved verbatim and in order,
+Recorded from 2026-10-11 onward. Project prompts are preserved verbatim and in order,
 including voice-dictation spellings. Environment payloads are omitted.
 Later corrections resolve transcription errors; quoted errors are not product
 requirements.
@@ -123,3 +123,7 @@ intent is recorded in [vision.md](vision.md).
 ## 26 — Continued completion work, 2026-10-12
 
 > Continue
+
+## 27 — Repository-led continuation, 2026-10-14
+
+> Work some more on renmodpy with the stuff that it needs, I am not sure if this conversation is outdated, if it is, work on renmodpy based on what is written in the repository.

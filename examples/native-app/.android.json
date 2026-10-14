@@ -6,6 +6,7 @@
   "numeric_version": 1,
   "orientation": "portrait",
   "permissions": [],
+  "renmodpy_deep_links": true,
   "include_pil": false,
   "include_sqlite": false,
   "layout": null,

@@ -11,11 +11,36 @@ init -800 python:
     def _rm_literal(value):
         return str(value).replace("{", "{{").replace("[", "[[")
 
+    def _rm_open_record_link(identifier):
+        # Overlay the current interaction rather than replacing its menu.
+        # Disabling each input also survives the next interaction refresh.
+        if renpy.get_screen("renmodpy_records"):
+            inputs = renpy.get_screen_variable("input_values", screen="renmodpy_records")
+            for value in inputs.values():
+                renpy.run(value.Disable())
+        renpy.show_screen("renmodpy_linked_record", identifier=identifier)
+        renpy.restart_interaction()
+
+    def _rm_copy_record_link(identifier, form):
+        try:
+            _rm_services.copy_text(_rm_services.record_link(identifier))
+            form.message = "Record link copied. Your draft is kept."
+        except (ValueError, _rm_services.ClipboardError) as error:
+            form.message = str(error) + " Your draft is kept."
+
+    def _rm_close_record_link_after_load():
+        # A mobile background save can include the visible overlay. Loading
+        # that story position must not replay an already consumed Intent.
+        renpy.hide_screen("renmodpy_linked_record")
+
     def _rm_record_snapshot(collection="records"):
         try:
             return _rm_services.records(collection).snapshot(), ""
         except (ValueError, renmodpy.RecordsError) as error:
             return {"revision": 0, "records": []}, str(error)
+
+    def _rm_linked_record(snapshot, identifier):
+        return next((row for row in snapshot["records"] if row["id"] == identifier), None)
 
     def _rm_submit_record(form, collection, revision):
         if form.submit(_rm_services.records(collection), revision) and renpy.android:
@@ -225,9 +250,11 @@ init -800 python:
         renpy.full_restart(label="renmodpy_restart", target=story_label, save=False)
 
 init 800 python:
-    _rm_services.bind(renpy)
+    _rm_services.bind(renpy, deep_link_handler=_rm_open_record_link)
     if _rm_services.poll_services not in config.periodic_callbacks:
         config.periodic_callbacks.append(_rm_services.poll_services)
+    if _rm_close_record_link_after_load not in config.after_load_callbacks:
+        config.after_load_callbacks.append(_rm_close_record_link_after_load)
 
 default _renmodpy_board = None
 default renmodpy_scene = "Story"
@@ -546,6 +573,8 @@ screen renmodpy_records(collection="records", title="Records", fields=renmodpy.D
                                 spacing 12
                                 style_prefix "renmodpy_clipboard"
                                 textbutton "Copy record" action Function(_rm_copy_record, record["values"], form.fields, form)
+                                if collection == "records" and _rm_services.deep_links_enabled():
+                                    textbutton "Copy link" action Function(_rm_copy_record_link, record["id"], form)
                                 if renpy.android:
                                     textbutton "Share record":
                                         id ("record_share_" + record["id"])
@@ -553,6 +582,40 @@ screen renmodpy_records(collection="records", title="Records", fields=renmodpy.D
                 if not snapshot["records"] and not read_error:
                     text "Your saved records will appear here." style "renmodpy_caption"
     key "game_menu" action ShowMenu("renmodpy_home")
+
+screen renmodpy_linked_record(identifier):
+    modal True
+    zorder 210
+    style_prefix "renmodpy"
+    $ snapshot, read_error = _rm_record_snapshot()
+    $ linked_record = _rm_linked_record(snapshot, identifier)
+    add Solid("#000000c0")
+    frame:
+        xalign 0.5
+        yalign 0.5
+        xsize 648
+        vbox:
+            spacing 18
+            text "Linked record" style "renmodpy_heading"
+            text "Close to return to your screen. Your draft and story are kept." style "renmodpy_caption"
+            viewport:
+                ymaximum 600
+                xfill True
+                mousewheel True
+                draggable True
+                scrollbars "vertical"
+                vbox:
+                    xsize 584
+                    spacing 14
+                    if read_error:
+                        text _rm_literal(read_error) style "renmodpy_caption"
+                    elif linked_record is None:
+                        text "This record is no longer available." style "renmodpy_caption"
+                    else:
+                        for field in renmodpy.DEFAULT_FIELDS:
+                            text _rm_literal(linked_record["values"].get(field.name, "")) size (28 if field == renmodpy.DEFAULT_FIELDS[0] else 24)
+            textbutton "Close record" action Hide("renmodpy_linked_record")
+    key "game_menu" action Hide("renmodpy_linked_record")
 
 screen renmodpy_saves():
     tag menu

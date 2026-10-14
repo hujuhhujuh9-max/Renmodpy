@@ -27,6 +27,7 @@ class CreateProjectTests(unittest.TestCase):
         config = json.loads((project / ".android.json").read_text())
         self.assertEqual(config["package"], "org.example.stories")
         self.assertEqual(config["name"], 'Café "Stories"')
+        self.assertTrue(config["renmodpy_deep_links"])
         self.assertTrue((project / "game/media/colors.webm").is_file())
         self.assertFalse((project / "android.keystore").exists())
         self.assertFalse((project / "game/android_probe.rpy").exists())

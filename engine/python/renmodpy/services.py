@@ -20,6 +20,7 @@ _engine = None
 _thread = None
 _records = {}
 _data_directory = None
+_deep_link_handler = None
 
 
 class ClipboardError(RuntimeError):
@@ -137,6 +138,26 @@ def poll_services():
     documents = sys.modules.get(__package__ + ".android_documents")
     if engine.android and documents is not None:
         documents.poll()
+    if engine.android and _deep_link_handler is not None:
+        from . import android_deep_links
+        identifier = android_deep_links.poll()
+        if identifier is not None:
+            _deep_link_handler(identifier)
+
+
+def deep_links_enabled():
+    if not owner().android:
+        return False
+    from . import android_deep_links
+    return android_deep_links.enabled()
+
+
+def record_link(identifier):
+    """A link to saved default-collection data, never an unsaved draft."""
+    if not owner().android:
+        raise ValueError("Record links use the Android application's identity.")
+    from . import android_deep_links
+    return android_deep_links.link(identifier)
 
 
 def file_request_pending():
@@ -208,10 +229,11 @@ def clipboard_text():
         raise ClipboardError("Clipboard text could not be read.") from error
 
 
-def bind(engine, *, data_directory=None):
-    global _engine, _thread, _records, _data_directory
+def bind(engine, *, data_directory=None, deep_link_handler=None):
+    global _engine, _thread, _records, _data_directory, _deep_link_handler
     _engine, _thread = engine, threading.get_ident()
     _records, _data_directory = {}, data_directory
+    _deep_link_handler = deep_link_handler
 
 
 def _record_path(collection):

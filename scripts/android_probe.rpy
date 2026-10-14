@@ -136,7 +136,7 @@ init 900 python:
         _rm_android_probe.sequence += 1
         screens = [name for name in ("main_menu", "say", "choice", "confirm", "renmodpy_home",
             "renmodpy_records", "renmodpy_settings", "renmodpy_history", "renmodpy_saves",
-            "renmodpy_tactics", "renmodpy_validation_tools", "renmodpy_example_media") if renpy.get_screen(name)]
+            "renmodpy_tactics", "renmodpy_validation_tools", "renmodpy_example_media", "renmodpy_linked_record") if renpy.get_screen(name)]
         buttons = []
         for focus in renpy.display.focus.focus_list:
             if focus.x is None:
@@ -186,6 +186,9 @@ init 900 python:
             state["form_message"] = form.message
             state["transfer"] = dict(renpy.get_screen_variable("transfer", screen="renmodpy_records"))
             state["displayed_record_ids"] = [row["id"] for row in renpy.get_screen_variable("displayed_records", screen="renmodpy_records")]
+        if "renmodpy_linked_record" in screens:
+            state["linked_record"] = renpy.get_screen_variable("linked_record", screen="renmodpy_linked_record")
+            state["linked_identifier"] = renpy.get_screen_variable("identifier", screen="renmodpy_linked_record")
         temporary = _rm_android_probe.directory / "state.tmp"
         temporary.write_text(_rm_android_json.dumps(state, ensure_ascii=False))
         _rm_android_os.replace(temporary, _rm_android_probe.directory / "state.json")

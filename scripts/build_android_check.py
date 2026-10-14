@@ -65,6 +65,9 @@ def main():
     script.write_text(script.read_text().replace('define config.version = "0.1.0"', 'define config.version = "0.1.1"'))
     upgrade_apk = build(upgrade, output / "upgrades")
     clean_project = create_project(sdk, output / "fresh-project", "Fresh RenModPy Story", "org.renmodpy.packaging")
+    clean_config = json.loads((clean_project / ".android.json").read_text())
+    clean_config["renmodpy_deep_links"] = False
+    (clean_project / ".android.json").write_text(json.dumps(clean_config, indent=2) + "\n")
     shutil.copy2(project / "android.keystore", clean_project / "android.keystore")
     shutil.copy2(project / "bundle.keystore", clean_project / "bundle.keystore")
     aab = build(clean_project, output / "bundles", bundle=True)
@@ -80,9 +83,14 @@ def main():
                                  capture_output=True, text=True, check=True).stdout
         package, code, version = re.search(r"package: name='([^']+)' versionCode='(\d+)' versionName='([^']+)'", badging).groups()
         permissions = re.findall(r"uses-permission: name='([^']+)'", badging)
+        manifest = subprocess.run([str(android_tools / "aapt2"), "dump", "xmltree", str(path),
+            "--file", "AndroidManifest.xml"], capture_output=True, text=True, check=True).stdout
+        assert "android.intent.action.VIEW" in manifest and "android.intent.category.BROWSABLE" in manifest
+        assert "org.renmodpy.deep_links" in manifest and '"' + package + '"' in manifest and '"records"' in manifest
         assert "android.permission.WRITE_EXTERNAL_STORAGE" not in permissions
         assert not set(permissions) & {"android.permission.CAMERA", "android.permission.RECORD_AUDIO", "android.permission.ACCESS_FINE_LOCATION"}
-        return {"package": package, "version_code": int(code), "version": version, "permissions": permissions}
+        return {"package": package, "version_code": int(code), "version": version, "permissions": permissions,
+                "record_link_scheme": package, "record_links_enabled": True}
     base_metadata, upgrade_metadata = apk_metadata(apk), apk_metadata(upgrade_apk)
     assert base_metadata["package"] == upgrade_metadata["package"] == "org.renmodpy.example"
     assert upgrade_metadata["version_code"] > base_metadata["version_code"]
@@ -94,6 +102,8 @@ def main():
     with zipfile.ZipFile(aab) as archive:
         names = archive.namelist()
         assert "base/manifest/AndroidManifest.xml" in names and "base/dex/classes.dex" in names
+        clean_manifest = archive.read("base/manifest/AndroidManifest.xml")
+        assert b"org.renmodpy.deep_links" not in clean_manifest and b"android.intent.action.VIEW" not in clean_manifest
         assert any(name.startswith("base/lib/arm64-v8a/") for name in names)
         assert any(name.startswith("base/lib/x86_64/") for name in names)
         assert not any("probe" in name for name in names if name.startswith("base/assets/"))
@@ -112,6 +122,7 @@ def main():
         "signer_sha256": certificate, "same_key_upgrade": True,
         "base_metadata": base_metadata, "upgrade_metadata": upgrade_metadata,
         "fresh_project_package": "org.renmodpy.packaging", "fresh_project_has_observers": False,
+        "fresh_project_record_links_enabled": False,
         "aab_signed": True, "aab_abis": ["arm64-v8a", "x86_64"],
         "release": False}, indent=2) + "\n")
     print(f"Android validation APK: {apk}", flush=True)
