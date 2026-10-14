@@ -51,9 +51,11 @@ jobs:
             .renmodpy-build/native-check/*.log
             .renmodpy-build/native-check/*.json
             .renmodpy-build/native-check/*.png
+            .renmodpy-build/native-check/*.xml
             .renmodpy-build/native-check-software/*.log
             .renmodpy-build/native-check-software/*.json
             .renmodpy-build/native-check-software/*.png
+            .renmodpy-build/native-check-software/*.xml
             .renmodpy-build/renmodpy-sdk/renmodpy-build.json
           if-no-files-found: warn
           retention-days: 14

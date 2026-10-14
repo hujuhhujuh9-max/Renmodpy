@@ -12,7 +12,7 @@
 +++ b/templates/app-AndroidManifest.xml
 @@ -19,4 +19,4 @@
 -        android:launchMode="singleTop"
-+        android:launchMode="{{ 'singleTask' if config.renmodpy_deep_links == true else 'singleTop' }}"
++        android:launchMode="{% if config.renmodpy_deep_links == true %}singleTask{% else %}singleTop{% endif %}"
          android:screenOrientation="{{ config.orientation }}"
          android:exported="true"
          >

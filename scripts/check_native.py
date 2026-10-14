@@ -6,7 +6,10 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
+import types
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from media_evidence import inspect_frames
 from create_project import create_project
@@ -183,6 +186,33 @@ def check(sdk, output):
                 "apk_built": False}
         receipt["checks"].append("added engine modules/screens present in Android distribution")
         receipt["checks"].append("new project creation compiles, lints and packages with its own identity and without validation observers")
+        # Use RAPT's own Jinja 2.10 and autoescape callback. A modern host
+        # Jinja or XML inspection alone misses its conditional-expression bug.
+        sys.path.insert(0, str(sdk / "rapt/buildlib"))
+        try:
+            import jinja2
+            environment = jinja2.Environment(loader=jinja2.FileSystemLoader(str(sdk / "rapt")),
+                autoescape=lambda filename: filename.endswith(".xml"))
+            template = environment.get_template("templates/app-AndroidManifest.xml")
+            android_ns = "{http://schemas.android.com/apk/res/android}"
+            for enabled in (True, False):
+                configuration = types.SimpleNamespace(package="org.example.link_story", orientation="portrait",
+                    store="none", permissions=[], renmodpy_deep_links=enabled)
+                manifest = template.render(config=configuration, manifest_extra="")
+                (output / ("record-links-enabled.xml" if enabled else "record-links-disabled.xml")).write_text(manifest)
+                root = ET.fromstring(manifest)
+                activity = root.find("application/activity")
+                assert activity.get(android_ns + "launchMode") == ("singleTask" if enabled else "singleTop")
+                data = activity.findall("intent-filter/data")
+                if enabled:
+                    assert len(data) == 1 and data[0].get(android_ns + "scheme") == "org.example.link+story"
+                    assert data[0].get(android_ns + "host") == "records"
+                    assert root.find("application/meta-data").get(android_ns + "value") == "true"
+                else:
+                    assert not data and root.find("application/meta-data") is None
+        finally:
+            sys.path.pop(0)
+        receipt["checks"].append("RAPT's bundled Jinja renders enabled/disabled Record-link filters, package schemes and single-task/single-top modes")
         (output / "passed.json").write_text(json.dumps(receipt, indent=2) + "\n")
     print(f"Native receipt and screenshots: {output}")
 
