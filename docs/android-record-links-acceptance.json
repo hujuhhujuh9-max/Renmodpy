@@ -1,0 +1,510 @@
+{
+  "verified_at_utc": "2026-10-14T14:49:40.940137+00:00",
+  "review_head": "5cb2aff0a9d6487d264b87db0ae001c4e65807ab",
+  "run_url": "https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38581377270",
+  "jobs": [
+    {
+      "id": 115911840162,
+      "name": "Android APK and emulator checks",
+      "conclusion": "success"
+    },
+    {
+      "id": 115911841046,
+      "name": "Python state and build checks",
+      "conclusion": "success"
+    },
+    {
+      "id": 115911842269,
+      "name": "Native Ren'Py save and screen checks",
+      "conclusion": "success"
+    }
+  ],
+  "host_tests": 88,
+  "build": {
+    "apk": "org.renmodpy.example-0.1.0-1791988403-release.apk",
+    "package": "org.renmodpy.example",
+    "sha256": "66f5240a712eaaa3149e07b0b70086ffd5c56eaea1bf3653dffd0f688e2346a3",
+    "validation_fixture": true,
+    "upgrade_apk": "org.renmodpy.example-0.1.1-1791988503-release.apk",
+    "upgrade_sha256": "f0c125a6d55e025743d7413453d244e26d173c414f111fbb015c319fa14fb16e",
+    "aab": "org.renmodpy.packaging-0.1.0-1791988534-release.aab",
+    "aab_sha256": "52c37517e842848997ba1824bdf144c2646860f3236f7ac1cc96f181bed6e667",
+    "signer_sha256": "c3a4c4dda9506422fcc0f595babbc58bba8be2313a0637c3950ae763037bbc20",
+    "same_key_upgrade": true,
+    "base_metadata": {
+      "package": "org.renmodpy.example",
+      "version_code": 1791988403,
+      "version": "0.1.0",
+      "permissions": [
+        "android.permission.WAKE_LOCK",
+        "android.permission.VIBRATE",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_DATA_SYNC",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "org.renmodpy.example.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+      ],
+      "record_link_scheme": "org.renmodpy.example",
+      "record_links_enabled": true
+    },
+    "upgrade_metadata": {
+      "package": "org.renmodpy.example",
+      "version_code": 1791988503,
+      "version": "0.1.1",
+      "permissions": [
+        "android.permission.WAKE_LOCK",
+        "android.permission.VIBRATE",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_DATA_SYNC",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "org.renmodpy.example.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+      ],
+      "record_link_scheme": "org.renmodpy.example",
+      "record_links_enabled": true
+    },
+    "fresh_project_package": "org.renmodpy.packaging",
+    "fresh_project_has_observers": false,
+    "fresh_project_record_links_enabled": false,
+    "aab_signed": true,
+    "aab_abis": [
+      "arm64-v8a",
+      "x86_64"
+    ],
+    "release": false
+  },
+  "android": {
+    "result": "passed",
+    "platform": "Android emulator",
+    "engine": "Ren'Py 8.5.3.26051504",
+    "api": "35",
+    "abi": "x86_64",
+    "checks": [
+      "Android Keystore private text is encrypted outside backup; worker JNI uses the app loader and callbacks run on the engine owner",
+      "Native haptic requests run on Android's UI thread and return a boolean without claiming physical vibration",
+      "A real native custom-field form saves into its own private collection without changing ordinary Records",
+      "Android native audio playback advances, video visibly decodes both colors and ATL moves; stop/restart and menu exit control playback",
+      "A native InputConnection composes and commits café into the actual form; cancelling preserves saved Records and the waiting story",
+      "Android app switching preserves the live Records draft, waiting story and reading settings without saving a record",
+      "Real Android text choosers receive Unicode/multiline history and saved Records on the UI thread; dismissal preserves the draft, story, preferences and saves",
+      "Native history/record copy and Unicode/multiline paste use the platform clipboard; rejected title paste preserves the draft",
+      "Scoped document export/import, cancellation, malformed JSON and confirmed backup merge preserve the draft; another UID reads the granted attachment offline",
+      "Real Android edit/cancel/save and cancelled/confirmed record deletion retain the intended saved data",
+      "Authenticated private storage rejects tampered ciphertext without deleting it or replacing the key",
+      "Android taps move through Home/history/settings/Records and return to the exact dialogue",
+      "Force-stop/relaunch and durable Resume preserve story position, private Records and reading preferences",
+      "A background process kill recovers the waiting choice; switching apps from cold Home keeps that latest checkpoint",
+      "Native background recovery restores dialogue and choices newer than the explicit saves while keeping Records and reading settings",
+      "Loading an older Android quick save restores the earlier dialogue/choice state while keeping newer Records and reading preferences",
+      "Native save-name input, create/confirmed overwrite, process restart and confirmed named-load restore the chosen dialogue",
+      "Replay resets story/history/choice state while preserving Records, reading settings, quick and named checkpoints",
+      "Cancelling deletion retains the checkpoint; confirming deletes only the named checkpoint",
+      "A signed same-key APK upgrade starts the new version while keeping Records, preferences, quick saves, story Resume and the encrypted Keystore entry",
+      "Private storage survives process restart, older quick-load and replay; explicit deletion removes the entry and subsequent reads return missing",
+      "Compact and tall emulator sizes/densities retain the live draft, saved data and reading settings with tappable inputs; a landscape request respects the portrait app",
+      "Implicit warm Record links, deliberate repeated delivery and Copy link keep the same interpreter, unsaved draft, waiting story, Records and preferences; closing keeps input inactive",
+      "Malformed, foreign-package, file, label, query/fragment and non-VIEW links cannot act on story or application data; unavailable Records show a closable preview without replacing drafts",
+      "A real tap in another UID's offline app sends a VIEW Intent with no task flags; the single-task SDL activity reuses the same interpreter, draft and waiting story",
+      "A cold implicit Record link resolves the package-specific filter and previews current saved data over Home; only an explicit Resume restores the waiting story with current Records and settings",
+      "Implicit link launch after background process death preserves the pending recovery bytes; explicit Resume restores the waiting dialogue and consumed Intents never reopen after menu navigation"
+    ],
+    "physical_device": false,
+    "release": false
+  },
+  "native_xvfb": {
+    "result": "passed",
+    "engine": "Ren'Py 8.5.3.26051504",
+    "checks": [
+      "home/records/saves rendered",
+      "dialogue/home/resume round trip",
+      "history/settings/records menus preserve the dialogue interaction",
+      "record edit/reload keeps drafts and invisible fields",
+      "multiline record input",
+      "SDL clipboard Unicode/multiline copy/paste and plain history export",
+      "sharing unavailable on the host preserves Records drafts and the story session",
+      "Android-only Records share controls evaluate and disable input without changing the draft",
+      "linked Record overlay renders current saved data and preserves the underlying edited form, inactive input and waiting story",
+      "missing Record links, the after-load dismissal and SDL Android Back events preserve drafts and story history",
+      "backup preview/confirmed import keeps edited drafts and hidden fields and requires reload",
+      "casefold Records sorting and saved order retain stored rows and the edited draft",
+      "reading settings survive restart and older story load",
+      "populated save browser rendered",
+      "native board rendered",
+      "durable resume exact slot",
+      "named checkpoint create/overwrite/delete",
+      "real engine restart/load",
+      "board and camera restored",
+      "story variable restored",
+      "newer records preserved",
+      "completion clears resume but keeps named checkpoints",
+      "quick save restores exact story/board state after restart",
+      "replay resets story/history while keeping records, reading settings, quick and named saves",
+      "ordinary startup and fresh-process Home Resume/Quick load restore the first dialogue",
+      "a recompiled version update preserves statement identities and loads the previous release's first-dialogue save",
+      "first-dialogue Resume and Quick load after replay survive fresh processes without rewinding Records or preferences",
+      "cold Home app switch keeps the latest background checkpoint",
+      "fresh-process recovery restores a waiting choice and later chosen dialogue",
+      "recovery keeps newer Records and reading preferences",
+      "live foreground cleanup keeps the story session and quick save",
+      "queued/buffered SDL suspend runs before renderer redraw and preserves the live dialogue",
+      "native audio playback advances, video renders both decoded colors, ATL visibly moves and media channels stop on exit",
+      "added engine modules/screens present in Android distribution",
+      "new project creation compiles, lints and packages with its own identity and without validation observers",
+      "RAPT's bundled Jinja renders enabled/disabled Record-link filters, package schemes and single-task/single-top modes"
+    ],
+    "android_distribution": {
+      "name": "org_renmodpy_freshstory-0.1.0-android",
+      "files": [
+        ".android.json",
+        "game/script.rpyc",
+        "renpy/common/00renmodpy.rpyc",
+        "renpy/renmodpy/__pycache__/__init__.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/android_deep_links.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/android_device.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/android_documents.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/android_jni.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/android_jni_executor.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/android_sharing.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/android_workers.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/board.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/board_session.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/deep_links.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/forms.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/records.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/services.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/tactics.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/transfers.cpython-312.pyc"
+      ],
+      "orientation": "portrait",
+      "permissions": [],
+      "apk_built": false
+    }
+  },
+  "native_software": {
+    "result": "passed",
+    "engine": "Ren'Py 8.5.3.26051504",
+    "checks": [
+      "home/records/saves rendered",
+      "dialogue/home/resume round trip",
+      "history/settings/records menus preserve the dialogue interaction",
+      "record edit/reload keeps drafts and invisible fields",
+      "multiline record input",
+      "SDL clipboard Unicode/multiline copy/paste and plain history export",
+      "sharing unavailable on the host preserves Records drafts and the story session",
+      "Android-only Records share controls evaluate and disable input without changing the draft",
+      "linked Record overlay renders current saved data and preserves the underlying edited form, inactive input and waiting story",
+      "missing Record links, the after-load dismissal and SDL Android Back events preserve drafts and story history",
+      "backup preview/confirmed import keeps edited drafts and hidden fields and requires reload",
+      "casefold Records sorting and saved order retain stored rows and the edited draft",
+      "reading settings survive restart and older story load",
+      "populated save browser rendered",
+      "native board rendered",
+      "durable resume exact slot",
+      "named checkpoint create/overwrite/delete",
+      "real engine restart/load",
+      "board and camera restored",
+      "story variable restored",
+      "newer records preserved",
+      "completion clears resume but keeps named checkpoints",
+      "quick save restores exact story/board state after restart",
+      "replay resets story/history while keeping records, reading settings, quick and named saves",
+      "ordinary startup and fresh-process Home Resume/Quick load restore the first dialogue",
+      "a recompiled version update preserves statement identities and loads the previous release's first-dialogue save",
+      "first-dialogue Resume and Quick load after replay survive fresh processes without rewinding Records or preferences",
+      "cold Home app switch keeps the latest background checkpoint",
+      "fresh-process recovery restores a waiting choice and later chosen dialogue",
+      "recovery keeps newer Records and reading preferences",
+      "live foreground cleanup keeps the story session and quick save",
+      "queued/buffered SDL suspend runs before renderer redraw and preserves the live dialogue",
+      "native audio playback advances, video renders both decoded colors, ATL visibly moves and media channels stop on exit",
+      "added engine modules/screens present in Android distribution",
+      "new project creation compiles, lints and packages with its own identity and without validation observers",
+      "RAPT's bundled Jinja renders enabled/disabled Record-link filters, package schemes and single-task/single-top modes"
+    ],
+    "android_distribution": {
+      "name": "org_renmodpy_freshstory-0.1.0-android",
+      "files": [
+        ".android.json",
+        "game/script.rpyc",
+        "renpy/common/00renmodpy.rpyc",
+        "renpy/renmodpy/__pycache__/__init__.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/android_deep_links.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/android_device.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/android_documents.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/android_jni.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/android_jni_executor.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/android_sharing.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/android_workers.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/board.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/board_session.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/deep_links.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/forms.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/records.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/services.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/tactics.cpython-312.pyc",
+        "renpy/renmodpy/__pycache__/transfers.cpython-312.pyc"
+      ],
+      "orientation": "portrait",
+      "permissions": [],
+      "apk_built": false
+    }
+  },
+  "source_files": {
+    "engine/android/java/org/renpy/android/RenModPyDocuments.java": "e56864211e99bb5b2afc5320003d697a0dc6cfaf4764ebbb6e9c8d0ba685e866",
+    "engine/android/java/org/renpy/android/RenModPySecureStorage.java": "9eee30de51f4901c3b171f5f57fe1c6330734c9784de5f3e9a78616ebc636475",
+    "engine/android/patches/deep-links.patch": "661b7e9d41487dab0d4d35137a587b7f8bbc0844e62ccbb230e1a7fb2d8ab238",
+    "engine/android/patches/display-density.patch": "223bab5ace1f6895fc313f62a991a78849548e71ee2623f235679653c18f695c",
+    "engine/android/patches/document-results.patch": "b7912bb3a5014b5cc11925e6e899f8f297797f8cbc20d94b1d03ed2a7f8af132",
+    "engine/common/00renmodpy.rpy": "bda633271da23dabf15ea52a5efec74da101506a9ee121450f80b624b4b666a0",
+    "engine/patches/mobile-recovery-preservation.patch": "89cb17361c304b11299af08d9081d2192778631f0fb5764b1bdc619efba10e49",
+    "engine/patches/mobile-suspend-before-render.patch": "1f4424c075d0cd02f8cb3ae9db83b9c54db86f7b2fdd281c4f63c611635dcb4b",
+    "engine/patches/startup-load-boundary.patch": "df0a86703fd76586891ef69156a34b26d5bf82cb0e209c3fbb196a15e191d837",
+    "engine/python/renmodpy/__init__.py": "0e20252279c60d54a33d9bd1c73c21a87236222cd67221817f1a6c9f2c8db8b5",
+    "engine/python/renmodpy/android_deep_links.py": "f770451f799afbe3159179e080e6060ee6befd15dcbe205fce924c205f4194ff",
+    "engine/python/renmodpy/android_device.py": "4a01b79371411bce2697db7028933878cf361b4b97206b71f4e90faaedae0178",
+    "engine/python/renmodpy/android_documents.py": "10da1bed3b1db9769f78d3be22c43620ff08c80eec1bc1f3ab9d16cabf5839fd",
+    "engine/python/renmodpy/android_jni.py": "1420f626256c96338db12b5e1ba78eeb33fe9c001e0af1895ccfb5eb4e1182e5",
+    "engine/python/renmodpy/android_jni_executor.py": "f35a4a838ba4c998c6d5ef8456e0b72e2b36727b46b55423ca7b6f9d6fce62cd",
+    "engine/python/renmodpy/android_sharing.py": "4b753e44e5fb65114742b0574811a9af0f301a2d6265ae801752fc1eddf3493c",
+    "engine/python/renmodpy/android_workers.py": "0c0e50dfa77f7c3af7bf26b8839a6dce7860888b482f419aff5de7001e75b1f7",
+    "engine/python/renmodpy/board.py": "bb0d7f40acc3e17d43810aef7c070ae2cf3926467017f3f9e87db6dd0ee015d0",
+    "engine/python/renmodpy/board_session.py": "9adf41acee3017e71c8756dc413f31ddff2e0077ec2091d78506bd79a1e6eda8",
+    "engine/python/renmodpy/deep_links.py": "d3a1ca1520d0e1e7c6353f9716dd2600f281e5d8db5fce2babf48f1da68fcc9e",
+    "engine/python/renmodpy/forms.py": "676e00678d801b2c87b5e085a1198115a05451dc950d8eddd3cf1176a24aea61",
+    "engine/python/renmodpy/records.py": "70d25372eaed4c8f9832accc04a89e37445018bfa0a1018dc4ab02e10ce9fffd",
+    "engine/python/renmodpy/services.py": "3f77c92178ee5b795092cc660a0f3bda5d88ffe6a1241714efd626ed63f59e18",
+    "engine/python/renmodpy/tactics.py": "1eaabfb127e9a4186c2dd2f4697239f2596c841dd5cb1ca8a6ed446b31e18ff1",
+    "engine/python/renmodpy/transfers.py": "07a7871380fec1285a64027d546da95fa8615b45ce398c89b759064bd04994ac",
+    "examples/native-app/.android.json": "6d45304770fdc2a94ab692d12d826952207a212aa3de61e4bab3d0751245ef26",
+    "examples/native-app/.gitignore": "0caaa1ca8d0f8710a2e329cf91c73f965cd4b05af1e66bc1a39c76e5a31c2523",
+    "examples/native-app/game/media/README.md": "f397b44ab474113bfc788d6a3838042e89e2787e78abed79b9fc8cf5cf35f10e",
+    "examples/native-app/game/media/colors.webm": "93b6dfe5c035ac173da126966f59b2898044825f922f8d8ab8d16f78c5a51121",
+    "examples/native-app/game/media/tone.wav": "8355bca2f4f8fee83ac7a4b30f24cb6fe2f3ac3bd6c3a500db6571e97ac1e6fb",
+    "examples/native-app/game/media.rpy": "e53865116e3a508af538f7a6ebc14da392fd498ad37963178c99defcdd0c2856",
+    "examples/native-app/game/script.rpy": "8b38a5cb3115af09ae5ca70b18e43df41fd42a28aa094047b514db5f14c80a44",
+    "sdk-lock.json": "2fce1b084becef03f9b6125eef167f6cbdf97eae1676a7389f7a8f15586b56d2",
+    "scripts/create_project.py": "d555ca63355172e3006c89d4df4416760d205c24ccda696dd78ce5961b555ce0"
+  },
+  "record_links": {
+    "uri": "org.renmodpy.example://records/c48e1f6b1810497e8083408a848c2bec",
+    "saved_record": {
+      "id": "c48e1f6b1810497e8083408a848c2bec",
+      "values": {
+        "title": "Emulator note",
+        "body": "Someone left a folded note at the lighthouse: ‘Meet at Blåbær Cove before sunset.’\nThe tide is coming in."
+      }
+    },
+    "warm_boot": "de1d40ce305b4b0a82e15e3f1267bd14",
+    "cold_boot": "ded651df01764ba3b2e9b2987fd584f1",
+    "recovery_boot": "457c8344ec954631b2fea3ff0ab16117",
+    "draft_preserved": true,
+    "repeated_delivery": true,
+    "input_inactive_on_close": true,
+    "recovery_sha256": "c90eb05efb7a1ea47e5c1d063212cc0a472ae6a7044988aa59ba611a821e37af",
+    "recovery_preserved": true,
+    "automatic_story_load": false,
+    "consumed_links_replayed": false
+  },
+  "rejected_links": [
+    {
+      "uri": "org.renmodpy.example://records/c48e1f6b1810497e8083408a848c2bec?action=delete",
+      "ignored": true
+    },
+    {
+      "uri": "org.renmodpy.example://records/c48e1f6b1810497e8083408a848c2bec#load",
+      "ignored": true
+    },
+    {
+      "uri": "org.renmodpy.example://records/c48e1f6b1810497e8083408a848c2bec/",
+      "ignored": true
+    },
+    {
+      "uri": "org.renmodpy.example://start/c48e1f6b1810497e8083408a848c2bec",
+      "ignored": true
+    },
+    {
+      "uri": "org.example.other://records/c48e1f6b1810497e8083408a848c2bec",
+      "ignored": true
+    },
+    {
+      "uri": "file:///data/user/0/org.renmodpy.example/files/records.json",
+      "ignored": true
+    }
+  ],
+  "external_caller": {
+    "uri": "org.renmodpy.example://records/c48e1f6b1810497e8083408a848c2bec",
+    "action": "android.intent.action.VIEW",
+    "flags": 0,
+    "uid": 10210,
+    "task_id": 13,
+    "result": "launched",
+    "renmodpy_uid": 10209,
+    "same_interpreter": true
+  },
+  "evidence": {
+    "private_storage": {
+      "ciphertext_sha256": "a16d10bc7ba231871ec87176c7d150220cfccb5fc0d7bfda0d366f24041ddc74",
+      "plaintext_on_disk": false,
+      "outside_backup": true,
+      "owner_thread": true
+    },
+    "unicode_composition": {
+      "input_connection": true,
+      "ui_thread": true,
+      "compose_first": true,
+      "compose_final": true,
+      "commit": true,
+      "finish": true
+    },
+    "media": {
+      "audio_positions": [
+        0.896,
+        1.834,
+        0.944,
+        1.584,
+        0.522,
+        1.76
+      ],
+      "visible_frames": [
+        {
+          "frame": "media-0.png",
+          "video_color": "blue",
+          "light_x": 252.5
+        },
+        {
+          "frame": "media-1.png",
+          "video_color": "red",
+          "light_x": 512.5
+        },
+        {
+          "frame": "media-2.png",
+          "video_color": "red",
+          "light_x": 130.5
+        },
+        {
+          "frame": "media-3.png",
+          "video_color": "blue",
+          "light_x": 557.5
+        },
+        {
+          "frame": "media-4.png",
+          "video_color": "red",
+          "light_x": 298.5
+        },
+        {
+          "frame": "media-5.png",
+          "video_color": "blue",
+          "light_x": 351.5
+        }
+      ],
+      "channels_stop_on_exit": true,
+      "physical_audio_verified": false
+    },
+    "screen_profiles": {
+      "profiles": [
+        {
+          "size": [
+            480,
+            800
+          ],
+          "density": 160,
+          "draft_preserved": true,
+          "input_tapped": true
+        },
+        {
+          "size": [
+            1080,
+            2400
+          ],
+          "density": 320,
+          "draft_preserved": true,
+          "input_tapped": true
+        },
+        {
+          "size": [
+            720,
+            1280
+          ],
+          "density": 160,
+          "draft_preserved": true,
+          "input_tapped": true
+        }
+      ],
+      "rotation_requested": "landscape",
+      "application_orientation": "portrait",
+      "live_state_preserved": true
+    },
+    "attachment_receiver": {
+      "uri": "content://org.renmodpy.example.fileprovider/renmodpy_share/7589ced5e4504568b6667bd5e2405dde/records.json",
+      "scheme": "content",
+      "read_grant": true,
+      "action": "android.intent.action.SEND",
+      "mime": "application/json",
+      "text": "{\n  \"type\": \"renmodpy.records\",\n  \"version\": 1,\n  \"records\": [\n    {\n      \"id\": \"c48e1f6b1810497e8083408a848c2bec\",\n      \"values\": {\n        \"title\": \"Emulator note\",\n        \"body\": \"Someone left a folded note at the lighthouse: ‘Meet at Blåbær Cove before sunset.’\\nThe tide is coming in.\"\n      }\n    }\n  ]\n}\n",
+      "sha256": "5345b16498a4e6d74828985b4791369128be04525f72d9af579df492a80fd745",
+      "uid": 10210,
+      "result": "passed"
+    }
+  },
+  "screenshots": [
+    "record-link-background-recovery.png",
+    "record-link-cold-home.png",
+    "record-link-cold-resume.png",
+    "record-link-external-caller.png",
+    "record-link-missing.png",
+    "record-link-other-app.png",
+    "record-link-returned-records.png",
+    "record-link-warm.png"
+  ],
+  "artifacts": [
+    {
+      "id": 11904360871,
+      "name": "native-check",
+      "digest": "sha256:72fceb2da7d3d5135973c071e2f2f4c78421bfcab821776cdb85d12bf8092ae3",
+      "size_in_bytes": 2708931,
+      "created_at": "2026-10-14T14:35:37Z",
+      "expires_at": "2026-10-28T14:35:35Z",
+      "expired": false,
+      "downloaded_archive_sha256": "72fceb2da7d3d5135973c071e2f2f4c78421bfcab821776cdb85d12bf8092ae3",
+      "url": "https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38581377270/artifacts/11904360871"
+    },
+    {
+      "id": 11904103058,
+      "name": "android-emulator-check",
+      "digest": "sha256:b633cb8e9bd80abd504a88d828671ef0c19248a21231d333f062fe6328165483",
+      "size_in_bytes": 5036729,
+      "created_at": "2026-10-14T14:47:06Z",
+      "expires_at": "2026-10-28T14:47:04Z",
+      "expired": false,
+      "downloaded_archive_sha256": "b633cb8e9bd80abd504a88d828671ef0c19248a21231d333f062fe6328165483",
+      "url": "https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38581377270/artifacts/11904103058"
+    },
+    {
+      "id": 11903863118,
+      "name": "android-validation-apk",
+      "digest": "sha256:f034412ec2193a3a5036a596251b23d36c75424595bc935de6d8965cd4d7d70c",
+      "size_in_bytes": 158882688,
+      "created_at": "2026-10-14T14:47:12Z",
+      "expires_at": "2026-10-28T14:47:06Z",
+      "expired": false,
+      "downloaded_archive_sha256": "f034412ec2193a3a5036a596251b23d36c75424595bc935de6d8965cd4d7d70c",
+      "url": "https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38581377270/artifacts/11903863118"
+    }
+  ],
+  "previous_acceptance_sha256": {
+    "android-acceptance.json": "b8fb0b373f804c0a533ce491605296c9ff5fd41dfb247651e53c8aee44a4acca",
+    "android-clipboard-acceptance.json": "088077f247270f30e774d7a58fb5794803c6e2af4984ff0f0a84dc93c488a541",
+    "android-lifecycle-acceptance.json": "44ae573238ab40fc142e09e7a55287bad3e742941399e1c26006fd74f7ad9656",
+    "android-sharing-acceptance.json": "79053b4c8dc94b13884b95db90b47f61b6628acb7048d8643b1ea4541e98411f",
+    "android-services-acceptance.json": "bb1d23325c84c992fcaca226def888c57c56167c952718846e1ac9236ded34bd"
+  },
+  "limitations": [
+    "Custom URI scheme only; verified HTTPS App Links and browser associations are not implemented",
+    "Links preview the default Records collection and DEFAULT_FIELDS; custom routes/schemas are not implemented",
+    "ADB Intents and a real tap from another UID with no task flags were exercised; browser-specific behavior and physical ARM devices remain unverified",
+    "The disabled clean AAB manifest is checked; a disabled-project installation is not exercised",
+    "Hardware-backed Keystore, audible playback, felt haptics and additional IMEs require physical-device coverage",
+    "Board touch and optional richer controls remain unverified",
+    "Disposable signing keys and validation artifacts are not production signing or an application release"
+  ]
+}

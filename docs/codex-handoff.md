@@ -1,5 +1,71 @@
 # Codex handoff
 
+## Verified Records-link milestone, 2026-10-14
+
+Prompt 27 asks for repository-led continuation. The current remote branch was
+unchanged from the completed services milestone. The concrete follow-up is
+opening a saved default-collection Record from another Android entry point
+without replacing a live form or loading/advancing a story.
+
+The engine now captures initial/new Android VIEW Intents into one synchronized,
+bounded pending text slot, consumed once on the Ren'Py owner. Projects opt in
+with `renmodpy_deep_links`; the scheme comes from their own Android package.
+Only canonical `package://records/<32-character lowercase hex ID>` links are
+accepted. The Records screen offers Copy link. A modal read-only Title/Note
+preview overlays the current interaction; closing keeps the draft and input
+inactive. Missing Records show an unavailable message. Cold launch previews
+over Home and leaves Resume explicit. Loading a checkpoint dismisses a preview
+that was present in a mobile background save.
+
+- Verified code/test revision: `5cb2aff0a9d6487d264b87db0ae001c4e65807ab`.
+- [Green validation run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38581377270):
+  88 Python tests, 36 checks in each native renderer and 27 Android acceptance groups.
+- [Committed receipt](android-record-links-acceptance.json): all 34 source hashes,
+  checks, caller/recovery evidence, signed binary/archive hashes and limitations.
+- [Android evidence](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38581377270/artifacts/11904103058),
+  [native evidence](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38581377270/artifacts/11904360871)
+  and [signed APK/AAB fixtures](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38581377270/artifacts/11903863118)
+  expire on 2026-10-28. Downloaded source inputs and artifact/binary bytes match.
+- The [first Android run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38575199065)
+  built signed APK/AAB artifacts and completed the earlier acceptance scope,
+  then failed because Android Back did not close a repeated Record preview.
+  The SDL `K_AC_BACK` key now explicitly closes this overlay; native validation
+  injects both real SDL key events and checks the underlying form/history.
+- Enabled projects now use `singleTask` so another app's flag-free VIEW Intent
+  reuses the existing SDL activity. The new offline LinkActivity fixture sends
+  that Intent from a real button tap in another UID; it has no network access.
+- The [task-mode packaging run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38578128727)
+  exposed the bundled Jinja 2.10 optimizer passing a null template name to
+  RAPT's autoescape callback for an inline conditional expression. Use existing
+  Jinja block syntax for the activity mode; the native check now renders both
+  enabled and disabled manifests with the exact bundled version and preserves
+  the resulting XML in its evidence.
+- The [following emulator run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38578949993)
+  passes Back and rejected-link cases and opens the preview from the external
+  caller. It then stops at a harness-only UID-format assumption (`userId=` in
+  `dumpsys package`). The observer now reports Android ApplicationInfo.uid,
+  and the caller receipt is written before assertions for failure evidence.
+- All five earlier acceptance receipts remain byte-for-byte unchanged.
+- Authoring/API/scope: [Records links](authoring.md#links-to-saved-records).
+
+The new Android cases pass after the existing 22 services/story/device groups.
+A real offline caller tap sends an ACTION_VIEW Intent with no task flags;
+caller UID 10210 differs from RenModPy UID 10209 and the same interpreter,
+draft, story, Records and settings remain. Warm repeated links and Copy link
+pass; Close/Android Back keep input inactive. Malformed/foreign/file/label and
+non-VIEW Intents are ignored without changing data; missing Records stay
+closable. Two new cold processes preview over Home. A background save made
+with the preview visible survives process death byte-for-byte, and explicit
+Resume restores the story without reopening the consumed overlay. Screenshots
+were inspected. The disabled clean AAB omits the route/metadata; both rendered
+manifest modes and the signed upgrade remain verified.
+
+Custom collections/routes and verified HTTPS App Links remain outside this
+initial implementation. Browser-specific behavior, disabled-project runtime,
+physical ARM devices, other IMEs and production signing remain unverified.
+Enabled single-task projects can close native activities above the app when
+a link arrives. This section identifies the latest code and evidence.
+
 ## Completed continuation milestone, 2026-10-12
 
 The remaining completion work authorized in prompt 24 is implemented and
@@ -321,12 +387,13 @@ same deletion checks; no speculative filesystem change was made.
 
 ## Continue from this foundation
 
-Use the completed milestone at the top and [feature-parity.md](feature-parity.md).
-The emulator completion scope is finished; preserve all five receipts and their
-source identities. Continue with physical ARM-device input, hardware-backed
-Keystore, felt haptics and audible media in the owner's environment, then other
-IMEs, deep links, board touch or richer controls when a concrete use case calls
-for them. Production releases require the owner's retained signing key and
+Use the verified Records-link milestone at the top and [feature-parity.md](feature-parity.md).
+Preserve all six receipts and their source identities. Continue with physical
+ARM-device input, hardware-backed Keystore, felt haptics and audible media in
+the owner's environment, then other IMEs, browser-specific link delivery,
+disabled-project runtime, board touch or richer controls when a concrete use
+case calls for them. Custom routes and verified HTTPS App Links need their own
+use case and acceptance. Production releases require the owner's retained signing key and
 previous compiled scripts for save compatibility. Full RenFletPy parity is not
 established by one emulator and three display profiles.
 

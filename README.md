@@ -75,6 +75,7 @@ and Android packaging.
 | Reusable record forms | Add/edit/cancel/delete/reload, multiline fields, custom schemas and collections |
 | Clipboard | Copy visible record fields or plain history lines; append Unicode/multiline text to form drafts |
 | Android text sharing | Native chooser for visible saved record fields and plain history lines; unsaved drafts are kept |
+| Saved Record links | Opt-in package-specific links, a read-only preview over the current screen, Copy link and explicit story Resume |
 | Records backups and attachments | Scoped Android import/export, reviewed atomic merge and cache-backed attachment grants |
 | Private text and touch feedback | Android Keystore AES-GCM outside backups; native UI-thread feedback requests |
 | Audio, video and animation | Native Media room with playback controls, looping Movie and ATL motion |
@@ -121,24 +122,32 @@ RenFletPy is the behavioral benchmark. See [feature parity](docs/feature-parity.
 for implemented features and remaining Android-service/control gaps, and
 [authoring](docs/authoring.md) for an integrated app/story project.
 
-The [verified CI run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38311573307) passes 81 Python tests,
-33 checks with each real native renderer and 22 Android acceptance groups on
+The [verified CI run](https://github.com/hujuhhujuh9-max/Renmodpy/actions/runs/38581377270) passes 88 Python tests,
+36 checks with each real native renderer and 27 Android acceptance groups on
 Android 15/API 35 x86_64. Android tests exercise real composing Unicode input,
 custom Records, clipboard/text choosers, scoped backup import/export, attachment
 reads by another UID, private-storage tamper/restart/load/replay/delete,
 native media output and a signed same-key installed upgrade. Records, current
 settings, saves, story Resume and the encrypted entry survive the update.
 
+Package-specific Record links pass warm/repeated delivery, a real tap from
+another UID with no task flags, Android Back, rejected/missing links, cold
+launch and background process death. The preview keeps the live draft and
+waiting story, leaves Resume explicit, and never reopens from a consumed
+Intent when a checkpoint loads. See [Records-link authoring](docs/authoring.md#links-to-saved-records).
+
 The compact 480×800/160 dpi, tall 1080×2400/320 dpi and default 720×1280/160 dpi
 profiles retain the live draft and tappable inputs in the same interpreter;
 a landscape request respects the declared portrait orientation. Signed
 base/update APKs and a clean-project AAB pass signature, version, permission,
 ARM64/x86_64 packaging and downloaded-byte checks. The
-[acceptance receipt](docs/android-services-acceptance.json) preserves source and
+[acceptance receipt](docs/android-record-links-acceptance.json) preserves source and
 artifact hashes; the [Codex handoff](docs/codex-handoff.md) links the evidence.
 
 Physical-device/ARM runtime checks, hardware-backed Keystore behavior, audible
-playback, felt haptics, additional IMEs and deep links remain unverified.
+playback, felt haptics and additional IMEs remain unverified. Record links
+currently preview default-collection Title/Note through a custom URI scheme;
+verified HTTPS App Links, custom routes and browser-specific delivery remain.
 Release signing requires the owner's retained key. Full RenFletPy parity is
 still work ahead. Rive/Lottie and richer controls are optional additions when
 a concrete use case needs them. WebView is out of scope. See the

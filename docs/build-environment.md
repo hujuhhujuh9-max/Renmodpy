@@ -195,11 +195,11 @@ has no network permission. The keyboard commits composed Unicode through the
 actual native input connection. Private-storage checks inspect encryption,
 reject tampering and verify persistence across loads/restarts/upgrades. Media
 checks compare decoded video colors and ATL positions in screenshots and
-observe native playback progression. The completed emulator run passes all 22
+observe native playback progression. The latest emulator run passes all 27
 acceptance groups, including live
 480×800/160 dpi, 1080×2400/320 dpi and 720×1280/160 dpi profiles and declared
 portrait orientation. Density is handled by the SDL activity, preserving its
-interpreter and draft. See [acceptance evidence](android-services-acceptance.json).
+interpreter and draft. See [acceptance evidence](android-record-links-acceptance.json).
 Headless playback does not establish audibility or felt haptics.
 
 The native screen probe also evaluates the Android-only Records Share button
@@ -207,3 +207,29 @@ using a screen-local platform flag. It runs the actual input-dismissal action
 and host failure path, verifying that the edited draft and stale-edit status
 are retained. This checks screen expressions without substituting for the
 emulator's JNI, chooser and lifecycle acceptance.
+
+## Record-link validation
+
+The example enables `renmodpy_deep_links` in its Android configuration. Enabled
+projects use their package-specific scheme and a single-task SDL activity;
+disabled projects retain single-top mode and omit the link filter/metadata.
+The native check renders both modes using RAPT's bundled Jinja 2.10, including
+underscore-to-`+` scheme conversion, and retains the XML in its evidence.
+The clean-project AAB disables links and its compiled manifest is checked.
+
+Android acceptance delivers implicit VIEW Intents to the packaged route, then
+explicit malformed/file/foreign/label/non-VIEW requests to the native boundary.
+It tests repeated delivery, actual Copy link, Close/Android Back and missing
+Records while preserving the live form and waiting story. The separate offline
+LinkActivity fixture also launches a VIEW Intent with no task flags from a
+real native button tap; ApplicationInfo.uid and the fixture receipt establish
+different UIDs, while observer boot IDs establish the same interpreter.
+
+Cold link launches preview over Home and leave Resume explicit. A background
+checkpoint made with the overlay visible must remain byte-for-byte unchanged
+after process death/link launch, restore the waiting story on Resume and keep
+the consumed preview dismissed. These five groups extend the earlier 22
+services/story/device groups. Browser-specific delivery, verified HTTPS App
+Links and disabled-project runtime are outside this check; see
+[authoring](authoring.md#links-to-saved-records) and the
+[acceptance receipt](android-record-links-acceptance.json).

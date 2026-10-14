@@ -62,9 +62,17 @@ with the same disposable key. Scoped document/attachment, installed same-key
 upgrade and compact/tall/default
 size/density acceptance now pass. The same interpreter retains the live draft,
 and the app keeps its declared portrait orientation. The
-[latest receipt](android-services-acceptance.json) preserves the evidence.
+[services receipt](android-services-acceptance.json) preserves that milestone.
+Opt-in package-specific Record links now pass warm/repeated delivery, a real
+tap from another UID, Android Back, invalid/missing links, cold launch and
+background recovery. The saved Title/Note preview preserves the draft and
+story; explicit Resume restores recovery without replaying a consumed preview.
+The [latest receipt](android-record-links-acceptance.json) records 88 host tests,
+36 checks per native renderer and 27 Android groups. Custom routes, verified
+HTTPS App Links, browser-specific behavior and disabled-project installation
+remain unverified.
 Physical-device/ARM runtime checks, audible
-playback, felt haptics, additional IMEs, deep links and board touch remain
+playback, felt haptics, additional IMEs and board touch remain
 unverified. Import checks and Linux probes do not establish these device results.
 
 See [feature parity](feature-parity.md) for the RenFletPy benchmark, current
