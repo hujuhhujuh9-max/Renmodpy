@@ -160,6 +160,7 @@ init 900 python:
             "editable_field": getattr(input_value, "key", "save_name") if editable and input_value else None}
         if renpy.android:
             state["surface_geometry"] = dict(_rm_android_probe.geometry)
+            state["app_uid"] = int(_rm_android_activity.getApplicationInfo().uid)
             state["device_orientation"] = int(_rm_android_activity.getResources().getConfiguration().orientation)
             state["display_density"] = int(_rm_android_activity.getResources().getConfiguration().densityDpi)
             state["ui_callbacks"] = len(_rm_android_jni._ui_calls)

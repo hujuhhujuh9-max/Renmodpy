@@ -906,16 +906,17 @@ def run(apk, output, upgrade_apk=None):
         caller_link = wait(lambda s: "renmodpy_linked_record" in s["screens"]
                            and s["sequence"] > caller_before["sequence"], "External-app tap did not open the linked Record")
         caller_receipt = json.loads(fixture_read("link.json"))
+        caller_receipt["renmodpy_uid"] = caller_link["app_uid"]
+        caller_receipt["same_interpreter"] = caller_link["boot"] == caller_before["boot"]
+        (output / "record-link-external-receipt.json").write_text(json.dumps(caller_receipt, indent=2) + "\n")
         assert caller_receipt["result"] == "launched" and caller_receipt["flags"] == 0
         assert caller_receipt["action"] == "android.intent.action.VIEW" and caller_receipt["uri"] == uri
-        package_dump = adb("shell", "dumpsys", "package", PACKAGE).stdout.decode()
-        assert caller_receipt["uid"] != int(re.search(r"userId=(\d+)", package_dump).group(1))
+        assert caller_receipt["uid"] != caller_link["app_uid"]
         assert caller_link["boot"] == caller_before["boot"] and caller_link["linked_record"] == linked_saved
         for key in ("records", "history", "draft", "editing", "font_size", "text_cps", "quick", "saves"):
             assert caller_link[key] == caller_before[key], "External link changed " + key
         assert caller_link["editable_field"] is None
         capture("record-link-other-app")
-        (output / "record-link-external-receipt.json").write_text(json.dumps(caller_receipt, indent=2) + "\n")
         tap("Close record")
         caller_closed = wait(lambda s: "renmodpy_linked_record" not in s["screens"], "External Record link did not close")
         assert caller_closed["draft"] == caller_before["draft"] and caller_closed["history"] == caller_before["history"]
