@@ -278,3 +278,7 @@ undelivered valid link wins. Polling never replays `getIntent()`. Loading a
 story checkpoint dismisses any saved preview so a consumed link cannot reopen
 from a background save. This is a custom URI scheme, not a verified HTTPS
 Android App Link; it has no domain ownership or browser association setup.
+Enabled projects use Android's `singleTask` activity mode so an external app
+can open a link without creating a second SDL activity/Python owner. Android
+may close native activities above the app when delivering that link. Disabled
+projects retain the original `singleTop` mode.

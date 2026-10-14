@@ -7,6 +7,7 @@ init 900 python:
     import types as _rm_check_types
     from pathlib import Path as _rm_check_Path
     from renpy.renmodpy.tactics import Cell as _rm_check_Cell
+    import renpy.pygame as _rm_check_pygame
 
     # Transient driver state must not itself be restored by a story load.
     _rm_check_probe = _rm_check_types.ModuleType("renmodpy_native_probe")
@@ -174,8 +175,21 @@ init 900 python:
         if mode == "records-link-missing":
             assert renpy.get_screen_variable("linked_record", screen="renmodpy_linked_record") is None
             _rm_check_capture("linked-record-missing")
-            _rm_check_probe.mode = "records-link-closed"
+            _rm_check_probe.mode = "records-link-after-load"
             _rm_close_record_link_after_load()
+            return None
+        if mode == "records-link-after-load":
+            assert not renpy.get_screen("renmodpy_linked_record")
+            _rm_check_probe.mode = "records-link-back"
+            _rm_open_record_link(_rm_check_probe.sharing_identifier)
+            return None
+        if mode == "records-link-back":
+            assert renpy.get_screen("renmodpy_linked_record")
+            _rm_check_probe.mode = "records-link-closed"
+            _rm_check_pygame.event.post(_rm_check_pygame.event.Event(_rm_check_pygame.KEYDOWN,
+                key=_rm_check_pygame.K_AC_BACK, mod=0, unicode="", scancode=0, repeat=False))
+            _rm_check_pygame.event.post(_rm_check_pygame.event.Event(_rm_check_pygame.KEYUP,
+                key=_rm_check_pygame.K_AC_BACK, mod=0, unicode="", scancode=0, repeat=False))
             return None
         if mode == "records-link-closed":
             assert not renpy.get_screen("renmodpy_linked_record")
@@ -361,7 +375,7 @@ label renmodpy_check_start:
                 "sharing unavailable on the host preserves Records drafts and the story session",
                 "Android-only Records share controls evaluate and disable input without changing the draft",
                 "linked Record overlay renders current saved data and preserves the underlying edited form, inactive input and waiting story",
-                "missing Record links and closing the overlay preserve drafts and story history",
+                "missing Record links, the after-load dismissal and SDL Android Back events preserve drafts and story history",
                 "backup preview/confirmed import keeps edited drafts and hidden fields and requires reload",
                 "casefold Records sorting and saved order retain stored rows and the edited draft",
                 "reading settings survive restart and older story load",

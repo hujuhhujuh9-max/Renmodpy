@@ -616,6 +616,7 @@ screen renmodpy_linked_record(identifier):
                             text _rm_literal(linked_record["values"].get(field.name, "")) size (28 if field == renmodpy.DEFAULT_FIELDS[0] else 24)
             textbutton "Close record" action Hide("renmodpy_linked_record")
     key "game_menu" action Hide("renmodpy_linked_record")
+    key "K_AC_BACK" action Hide("renmodpy_linked_record")
 
 screen renmodpy_saves():
     tag menu

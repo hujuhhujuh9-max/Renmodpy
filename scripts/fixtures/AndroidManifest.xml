@@ -1,6 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="org.renmodpy.validation">
     <uses-sdk android:minSdkVersion="23" android:targetSdkVersion="36" />
     <application android:label="RenModPy test receiver" android:debuggable="true" android:allowBackup="false">
+        <activity android:name=".LinkActivity" android:exported="true" />
         <activity android:name=".ReceiverActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
